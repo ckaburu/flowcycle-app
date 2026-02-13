@@ -2,11 +2,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { sqliteRepo } from './src/db/sqliteRepo';
+import { getRepository } from './src/db';
+
+const repository = getRepository();
 
 export default function App() {
   useEffect(() => {
-    sqliteRepo.init().catch((error) => {
+    repository.init().catch((error) => {
       console.error('Failed to initialize SQLite repository', error);
     });
   }, []);
