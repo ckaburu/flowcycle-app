@@ -1,7 +1,7 @@
 import { SQLiteDatabase, openDatabaseAsync } from "expo-sqlite";
 
 import { assertIsoDate } from "../utils/date";
-import { CycleStart, Profile, Repo } from "./repo";
+import { CycleStart, Profile, Repository } from "./repo";
 
 type ProfileRow = {
   id: number;
@@ -20,7 +20,7 @@ function nowIsoTimestamp(): string {
   return new Date().toISOString();
 }
 
-class SQLiteRepo implements Repo {
+class SQLiteRepo implements Repository {
   private dbPromise: Promise<SQLiteDatabase> | null = null;
   private initPromise: Promise<void> | null = null;
 
@@ -165,4 +165,4 @@ class SQLiteRepo implements Repo {
   }
 }
 
-export const sqliteRepo: Repo = new SQLiteRepo();
+export const sqliteRepo: Repository = new SQLiteRepo();

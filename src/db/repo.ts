@@ -11,7 +11,7 @@ export type CycleStart = {
   createdAt: string;
 };
 
-export interface Repo {
+export interface Repository {
   init(): Promise<void>;
   createProfile(name: string): Promise<Profile>;
   listProfiles(): Promise<Profile[]>;

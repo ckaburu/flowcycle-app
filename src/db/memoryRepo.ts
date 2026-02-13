@@ -1,11 +1,11 @@
 import { assertIsoDate } from "../utils/date";
-import { CycleStart, Profile, Repo } from "./repo";
+import { CycleStart, Profile, Repository } from "./repo";
 
 function nowIsoTimestamp(): string {
   return new Date().toISOString();
 }
 
-class MemoryRepo implements Repo {
+class MemoryRepo implements Repository {
   private profiles: Profile[] = [];
   private cycleStarts: CycleStart[] = [];
   private nextProfileId = 1;
@@ -68,4 +68,4 @@ class MemoryRepo implements Repo {
   }
 }
 
-export const memoryRepo: Repo = new MemoryRepo();
+export const memoryRepo: Repository = new MemoryRepo();
