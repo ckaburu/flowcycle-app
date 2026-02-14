@@ -28,7 +28,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "realm",
       "expo-sqlite",
       "expo-notifications",
       "expo-secure-store"
