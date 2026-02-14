@@ -28,8 +28,10 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "realm",
       "expo-sqlite",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
