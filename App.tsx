@@ -10,6 +10,7 @@ import { getRepository } from "./src/db";
 import { loadActiveProfileId } from "./src/domain/AppState";
 import { CycleLogScreen } from "./src/screens/CycleLogScreen";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
+import { SummaryScreen } from "./src/screens/SummaryScreen";
 import { RootStackParamList } from "./src/screens/navigationTypes";
 
 const repository = getRepository();
@@ -59,6 +60,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="Profiles">
         <Stack.Screen name="Profiles" component={ProfilesScreen} />
         <Stack.Screen name="CycleLog" component={CycleLogScreen} />
+        <Stack.Screen name="Summary" component={SummaryScreen} />
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>

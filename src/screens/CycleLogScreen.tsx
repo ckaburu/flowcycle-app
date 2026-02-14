@@ -87,6 +87,7 @@ export function CycleLogScreen({ navigation, route }: Props): JSX.Element {
           void onBackToProfiles();
         }}
       />
+      <Button title="View Summary" onPress={() => navigation.navigate("Summary")} />
 
       {isLoading ? <Text>Loading...</Text> : null}
       {error ? <Text>{error}</Text> : null}
