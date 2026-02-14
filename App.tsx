@@ -8,19 +8,12 @@ import { Text, View } from "react-native";
 
 import { getRepository } from "./src/db";
 import { loadActiveProfileId } from "./src/domain/AppState";
+import { CycleLogScreen } from "./src/screens/CycleLogScreen";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
 import { RootStackParamList } from "./src/screens/navigationTypes";
 
 const repository = getRepository();
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-function CycleLogPlaceholder(): JSX.Element {
-  return (
-    <View>
-      <Text>Cycle Log</Text>
-    </View>
-  );
-}
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -65,7 +58,7 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Profiles">
         <Stack.Screen name="Profiles" component={ProfilesScreen} />
-        <Stack.Screen name="CycleLog" component={CycleLogPlaceholder} />
+        <Stack.Screen name="CycleLog" component={CycleLogScreen} />
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
