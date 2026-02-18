@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { getRepository } from "../db";
 import { Profile } from "../db/repo";
 import { saveActiveProfileId } from "../domain/AppState";
+import { isPinSet } from "../domain/LockState";
 import {
   AppButton,
   AppCard,
@@ -30,6 +31,7 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [newProfileName, setNewProfileName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pinSet, setPinSet] = useState(false);
 
   const loadProfiles = useCallback(async (): Promise<void> => {
     setIsLoading(true);
@@ -45,10 +47,16 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
     }
   }, []);
 
+  const checkPinStatus = useCallback(async (): Promise<void> => {
+    const set = await isPinSet();
+    setPinSet(set);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       void loadProfiles();
-    }, [loadProfiles])
+      void checkPinStatus();
+    }, [loadProfiles, checkPinStatus])
   );
 
   const onAddProfile = async (): Promise<void> => {
@@ -128,6 +136,37 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
           style={styles.addButton}
         />
       </View>
+
+      <View style={styles.pinSection}>
+        <AppText variant="subheading" style={styles.pinHeading}>
+          Security
+        </AppText>
+        {pinSet ? (
+          <View style={styles.pinButtons}>
+            <AppButton
+              title="Change PIN"
+              variant="secondary"
+              onPress={() =>
+                navigation.navigate("SetupPin", { mode: "change" })
+              }
+            />
+            <AppButton
+              title="Remove PIN"
+              variant="secondary"
+              onPress={() =>
+                navigation.navigate("SetupPin", { mode: "remove" })
+              }
+              style={styles.removePinButton}
+            />
+          </View>
+        ) : (
+          <AppButton
+            title="Set PIN"
+            variant="secondary"
+            onPress={() => navigation.navigate("SetupPin", { mode: "set" })}
+          />
+        )}
+      </View>
     </ScreenContainer>
   );
 }
@@ -147,6 +186,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   addButton: {
+    marginTop: spacing.xs,
+  },
+  pinSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  pinHeading: {
+    marginBottom: spacing.sm,
+  },
+  pinButtons: {
+    gap: spacing.sm,
+  },
+  removePinButton: {
     marginTop: spacing.xs,
   },
 });
