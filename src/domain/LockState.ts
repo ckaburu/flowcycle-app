@@ -1,5 +1,5 @@
+import { NativeModules } from "react-native";
 import * as Crypto from "expo-crypto";
-import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -228,6 +228,13 @@ export async function isPinSet(): Promise<boolean> {
 
 export async function checkBiometricAvailability(): Promise<boolean> {
   try {
+    // Guard: skip if native module is not built into the binary
+    if (!NativeModules.ExpoLocalAuthentication) {
+      lockState.isBiometricAvailable = false;
+      return false;
+    }
+    const LocalAuthentication =
+      require("expo-local-authentication") as typeof import("expo-local-authentication");
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
     const isEnrolled = await LocalAuthentication.isEnrolledAsync();
     const available = hasHardware && isEnrolled;

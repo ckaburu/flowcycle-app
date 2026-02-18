@@ -19,6 +19,11 @@ import {
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
+// Stub NativeModules so the guard in checkBiometricAvailability passes
+jest.mock("react-native", () => ({
+  NativeModules: { ExpoLocalAuthentication: {} },
+}));
+
 const mockStore: Record<string, string> = {};
 
 jest.mock("expo-secure-store", () => ({

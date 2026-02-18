@@ -1,7 +1,6 @@
-import * as LocalAuthentication from "expo-local-authentication";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { NativeModules, StyleSheet, View } from "react-native";
 
 import {
   checkBiometricAvailability,
@@ -64,7 +63,11 @@ export function LockScreen({ onUnlock }: LockScreenProps): ReactElement {
       if (!available) return;
 
       try {
-        const result = await LocalAuthentication.authenticateAsync({
+        // Guard: skip if native module is not built into the binary
+        if (!NativeModules.ExpoLocalAuthentication) return;
+        const LA =
+          require("expo-local-authentication") as typeof import("expo-local-authentication");
+        const result = await LA.authenticateAsync({
           promptMessage: "Unlock FlowCycle",
           cancelLabel: "Use PIN",
           disableDeviceFallback: true,
