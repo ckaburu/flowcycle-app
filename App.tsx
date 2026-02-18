@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { getRepository } from "./src/db";
 import { loadActiveProfileId } from "./src/domain/AppState";
 import { getLockState, initLockState } from "./src/domain/LockState";
+import { useAppLock } from "./src/hooks/useAppLock";
 import { CycleLogScreen } from "./src/screens/CycleLogScreen";
 import { LockScreen } from "./src/screens/LockScreen";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
@@ -33,7 +34,7 @@ const navTheme = {
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  const { isLocked, setIsLocked } = useAppLock();
 
   useEffect(() => {
     let isMounted = true;
@@ -69,11 +70,11 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [setIsLocked]);
 
   const handleUnlock = useCallback(() => {
     setIsLocked(false);
-  }, []);
+  }, [setIsLocked]);
 
   if (!isReady) {
     return (
