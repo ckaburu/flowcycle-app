@@ -26,7 +26,7 @@ export default function App() {
       try {
         await repository.init();
       } catch (error) {
-        console.error("Failed to initialize SQLite repository", error);
+        console.error("Failed to initialize Realm repository", error);
       }
 
       try {

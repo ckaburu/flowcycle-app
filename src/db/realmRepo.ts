@@ -1,3 +1,4 @@
+import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import Realm from "realm";
 
@@ -60,14 +61,7 @@ function hexToBytes(hex: string): Uint8Array {
 }
 
 function generateEncryptionKey(): Uint8Array {
-  const cryptoApi = globalThis.crypto;
-  if (!cryptoApi?.getRandomValues) {
-    throw new Error("Secure random generator is unavailable for Realm key creation.");
-  }
-
-  const key = new Uint8Array(64);
-  cryptoApi.getRandomValues(key);
-  return key;
+  return Crypto.getRandomBytes(64);
 }
 
 type ProfileRecord = Realm.Object & {
