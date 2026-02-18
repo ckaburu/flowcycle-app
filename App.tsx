@@ -13,6 +13,7 @@ import { useAppLock } from "./src/hooks/useAppLock";
 import { CycleLogScreen } from "./src/screens/CycleLogScreen";
 import { LockScreen } from "./src/screens/LockScreen";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
+import { SetupPinScreen } from "./src/screens/SetupPinScreen";
 import { SummaryScreen } from "./src/screens/SummaryScreen";
 import { RootStackParamList } from "./src/screens/navigationTypes";
 import { LoadingIndicator, colors } from "./src/ui";
@@ -112,6 +113,11 @@ export default function App() {
             options={{ title: "Cycle Log" }}
           />
           <Stack.Screen name="Summary" component={SummaryScreen} />
+          <Stack.Screen
+            name="SetupPin"
+            component={SetupPinScreen}
+            options={{ title: "PIN Settings" }}
+          />
         </Stack.Navigator>
         <StatusBar style="dark" />
       </NavigationContainer>
