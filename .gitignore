@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# workspace / agent context (local only)
+prompts.md
+PROJECT_STATE.md
