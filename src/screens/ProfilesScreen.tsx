@@ -1,18 +1,31 @@
+import type { ReactElement } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useState } from "react";
-import { Button, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { getRepository } from "../db";
 import { Profile } from "../db/repo";
 import { saveActiveProfileId } from "../domain/AppState";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppText,
+  EmptyState,
+  ErrorBanner,
+  LoadingIndicator,
+  ScreenContainer,
+  colors,
+  spacing,
+} from "../ui";
 import { RootStackParamList } from "./navigationTypes";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profiles">;
 
 const repository = getRepository();
 
-export function ProfilesScreen({ navigation }: Props): JSX.Element {
+export function ProfilesScreen({ navigation }: Props): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [newProfileName, setNewProfileName] = useState("");
@@ -66,36 +79,74 @@ export function ProfilesScreen({ navigation }: Props): JSX.Element {
   };
 
   return (
-    <View>
-      <Text>Profiles</Text>
+    <ScreenContainer>
+      <AppText variant="heading" style={styles.title}>
+        Profiles
+      </AppText>
 
-      {isLoading ? <Text>Loading...</Text> : null}
-      {error ? <Text>{error}</Text> : null}
+      {error ? (
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      ) : null}
 
-      {!isLoading && profiles.length === 0 ? <Text>No profiles yet.</Text> : null}
+      {isLoading ? <LoadingIndicator /> : null}
+
+      {!isLoading && profiles.length === 0 ? (
+        <EmptyState
+          message="No profiles yet."
+          hint="Create one below to start tracking."
+        />
+      ) : null}
 
       {profiles.map((profile) => (
-        <Button
+        <Pressable
           key={profile.id}
-          title={`${profile.name} (id: ${profile.id})`}
           onPress={() => {
             void onSelectProfile(profile.id);
           }}
-        />
+          accessibilityRole="button"
+        >
+          <AppCard style={styles.profileCard}>
+            <AppText variant="subheading">{profile.name}</AppText>
+            <AppText variant="caption">ID: {profile.id}</AppText>
+          </AppCard>
+        </Pressable>
       ))}
 
-      <TextInput
-        value={newProfileName}
-        onChangeText={setNewProfileName}
-        placeholder="New profile name"
-        autoCapitalize="words"
-      />
-      <Button
-        title="Add Profile"
-        onPress={() => {
-          void onAddProfile();
-        }}
-      />
-    </View>
+      <View style={styles.inputRow}>
+        <AppInput
+          label="New profile"
+          value={newProfileName}
+          onChangeText={setNewProfileName}
+          placeholder="Profile name"
+          autoCapitalize="words"
+        />
+        <AppButton
+          title="Add Profile"
+          onPress={() => {
+            void onAddProfile();
+          }}
+          style={styles.addButton}
+        />
+      </View>
+    </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  title: {
+    marginBottom: spacing.md,
+  },
+  profileCard: {
+    marginBottom: spacing.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  inputRow: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  addButton: {
+    marginTop: spacing.xs,
+  },
+});

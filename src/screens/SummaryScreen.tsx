@@ -1,8 +1,9 @@
+import type { ReactElement } from "react";
 import * as Notifications from "expo-notifications";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useState } from "react";
-import { Button, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { getRepository } from "../db";
 import { getAppState, loadActiveProfileId } from "../domain/AppState";
@@ -17,6 +18,16 @@ import {
   scheduleNextPeriodReminder,
   scheduleTestNotificationInSeconds,
 } from "../utils/notifications";
+import {
+  AppButton,
+  AppCard,
+  AppText,
+  ErrorBanner,
+  LoadingIndicator,
+  ScreenContainer,
+  colors,
+  spacing,
+} from "../ui";
 import { RootStackParamList } from "./navigationTypes";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Summary">;
@@ -32,7 +43,7 @@ type SummaryData = {
 
 const repository = getRepository();
 
-export function SummaryScreen({ navigation }: Props): JSX.Element {
+export function SummaryScreen({ navigation }: Props): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SummaryData | null>(null);
@@ -159,49 +170,146 @@ export function SummaryScreen({ navigation }: Props): JSX.Element {
   };
 
   return (
-    <View>
-      <Text>Summary</Text>
-      <Button title="Back" onPress={() => navigation.goBack()} />
-      <Button
-        title="Enable notifications"
-        onPress={() => {
-          void onEnableNotifications();
-        }}
-      />
-      <Button
-        title="Schedule test notification (2 min)"
-        onPress={() => {
-          void onScheduleTestNotification();
-        }}
+    <ScreenContainer>
+      <AppText variant="heading" style={styles.title}>
+        Summary
+      </AppText>
+
+      <AppButton
+        title="Back"
+        variant="ghost"
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
       />
 
-      {isLoading ? <Text>Loading...</Text> : null}
-      {error ? <Text>{error}</Text> : null}
-      {notificationsGranted === false ? <Text>Warning: Notifications are not enabled.</Text> : null}
-      {notificationMessage ? <Text>{notificationMessage}</Text> : null}
+      {error ? (
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
+      ) : null}
+
+      {isLoading ? <LoadingIndicator /> : null}
+
+      {notificationsGranted === false ? (
+        <ErrorBanner message="Notifications are not enabled." />
+      ) : null}
+
+      {notificationMessage ? (
+        <AppCard style={styles.notifCard}>
+          <AppText variant="caption" color={colors.secondary}>
+            {notificationMessage}
+          </AppText>
+        </AppCard>
+      ) : null}
+
+      {/* Notification actions */}
+      <View style={styles.notifRow}>
+        <AppButton
+          title="Enable notifications"
+          variant="secondary"
+          onPress={() => {
+            void onEnableNotifications();
+          }}
+          style={styles.notifButton}
+        />
+        <AppButton
+          title="Test (2 min)"
+          variant="secondary"
+          onPress={() => {
+            void onScheduleTestNotification();
+          }}
+          style={styles.notifButton}
+        />
+      </View>
 
       {summary ? (
-        <View>
-          <Text>Profile: {summary.profileName}</Text>
-          <Text>Last Start: {summary.lastStart ?? "-"}</Text>
-          <Text>Cycle Day: {summary.cycleDay ?? "-"}</Text>
-          <Text>
-            Typical Cycle Length: {summary.typicalLen !== null ? `${summary.typicalLen} days` : "-"}
-          </Text>
-          <Text>Next Start Estimate: {summary.nextStartEstimate ?? "-"}</Text>
+        <AppCard style={styles.summaryCard}>
+          <AppText variant="subheading" style={styles.summaryTitle}>
+            {summary.profileName}
+          </AppText>
+
+          <View style={styles.dataRow}>
+            <AppText variant="label">Last Start</AppText>
+            <AppText variant="body">{summary.lastStart ?? "—"}</AppText>
+          </View>
+
+          <View style={styles.dataRow}>
+            <AppText variant="label">Cycle Day</AppText>
+            <AppText variant="number" color={colors.primary}>
+              {summary.cycleDay ?? "—"}
+            </AppText>
+          </View>
+
+          <View style={styles.dataRow}>
+            <AppText variant="label">Typical Length</AppText>
+            <AppText variant="body">
+              {summary.typicalLen !== null ? `${summary.typicalLen} days` : "—"}
+            </AppText>
+          </View>
+
+          <View style={styles.dataRow}>
+            <AppText variant="label">Next Estimate</AppText>
+            <AppText variant="body">{summary.nextStartEstimate ?? "—"}</AppText>
+          </View>
+
           {summary.nextStartEstimate ? (
-            <Button
+            <AppButton
               title="Schedule reminder 2 days before"
+              variant="primary"
               onPress={() => {
                 void onScheduleNextPeriodReminder();
               }}
+              style={styles.reminderButton}
             />
           ) : null}
+
           {summary.sortedStartDates.length < 2 ? (
-            <Text>Add at least two cycle starts to see estimates.</Text>
+            <AppText variant="caption" style={styles.hint}>
+              Add at least two cycle starts to see estimates.
+            </AppText>
           ) : null}
-        </View>
+        </AppCard>
       ) : null}
-    </View>
+    </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  title: {
+    marginBottom: spacing.xs,
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: spacing.md,
+  },
+  notifCard: {
+    marginBottom: spacing.sm,
+  },
+  notifRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  notifButton: {
+    flex: 1,
+  },
+  summaryCard: {
+    gap: spacing.sm,
+  },
+  summaryTitle: {
+    marginBottom: spacing.xs,
+  },
+  dataRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    paddingVertical: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  reminderButton: {
+    marginTop: spacing.md,
+  },
+  hint: {
+    textAlign: "center",
+    marginTop: spacing.md,
+  },
+});

@@ -1,10 +1,10 @@
 import "react-native-gesture-handler";
 
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { getRepository } from "./src/db";
 import { loadActiveProfileId } from "./src/domain/AppState";
@@ -12,9 +12,22 @@ import { CycleLogScreen } from "./src/screens/CycleLogScreen";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
 import { SummaryScreen } from "./src/screens/SummaryScreen";
 import { RootStackParamList } from "./src/screens/navigationTypes";
+import { LoadingIndicator, colors } from "./src/ui";
 
 const repository = getRepository();
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const navTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: colors.background,
+    card: colors.surface,
+    text: colors.text,
+    primary: colors.primary,
+    border: colors.border,
+  },
+};
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -49,20 +62,34 @@ export default function App() {
 
   if (!isReady) {
     return (
-      <View>
-        <Text>Loading...</Text>
-      </View>
+      <SafeAreaProvider>
+        <LoadingIndicator />
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Profiles">
-        <Stack.Screen name="Profiles" component={ProfilesScreen} />
-        <Stack.Screen name="CycleLog" component={CycleLogScreen} />
-        <Stack.Screen name="Summary" component={SummaryScreen} />
-      </Stack.Navigator>
-      <StatusBar style="auto" />
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer theme={navTheme}>
+        <Stack.Navigator
+          initialRouteName="Profiles"
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.primary,
+            headerTitleStyle: { color: colors.text, fontWeight: "600" },
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="Profiles" component={ProfilesScreen} />
+          <Stack.Screen
+            name="CycleLog"
+            component={CycleLogScreen}
+            options={{ title: "Cycle Log" }}
+          />
+          <Stack.Screen name="Summary" component={SummaryScreen} />
+        </Stack.Navigator>
+        <StatusBar style="dark" />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
