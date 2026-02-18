@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { InteractionManager, Pressable, StyleSheet, View } from "react-native";
 
 import { getRepository } from "../db";
 import { Profile } from "../db/repo";
@@ -54,8 +54,11 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
 
   useFocusEffect(
     useCallback(() => {
-      void loadProfiles();
-      void checkPinStatus();
+      const task = InteractionManager.runAfterInteractions(() => {
+        void loadProfiles();
+        void checkPinStatus();
+      });
+      return () => task.cancel();
     }, [loadProfiles, checkPinStatus])
   );
 
