@@ -18,3 +18,6 @@ export { AppCard } from "./AppCard";
 export { ErrorBanner } from "./ErrorBanner";
 export { EmptyState } from "./EmptyState";
 export { LoadingIndicator } from "./LoadingIndicator";
+
+// Lock
+export { PinPad } from "./PinPad";
