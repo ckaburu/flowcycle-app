@@ -1,9 +1,12 @@
+import * as LocalAuthentication from "expo-local-authentication";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import {
+  checkBiometricAvailability,
   getLockoutRemainingMs,
+  getLockState,
   PIN_LENGTH,
   unlockApp,
   verifyPin,
@@ -45,6 +48,40 @@ export function LockScreen({ onUnlock }: LockScreenProps): ReactElement {
   const lockoutIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
+  const biometricAttempted = useRef(false);
+
+  // ── Biometric auto-prompt on mount ────────────────────────────────
+
+  useEffect(() => {
+    if (biometricAttempted.current) return;
+    biometricAttempted.current = true;
+
+    const attemptBiometric = async (): Promise<void> => {
+      const state = getLockState();
+      if (!state.isBiometricEnabled) return;
+
+      const available = await checkBiometricAvailability();
+      if (!available) return;
+
+      try {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: "Unlock FlowCycle",
+          cancelLabel: "Use PIN",
+          disableDeviceFallback: true,
+        });
+
+        if (result.success) {
+          unlockApp();
+          onUnlock();
+        }
+        // On failure/cancel: fall back to PIN pad silently
+      } catch {
+        // Biometric failed — fall back to PIN pad silently
+      }
+    };
+
+    void attemptBiometric();
+  }, [onUnlock]);
 
   // ── Lockout countdown ────────────────────────────────────────────
 

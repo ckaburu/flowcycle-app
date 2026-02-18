@@ -1,10 +1,19 @@
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Switch, View } from "react-native";
 
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { PIN_LENGTH, removePin, setPin, verifyPin } from "../domain/LockState";
+import {
+  checkBiometricAvailability,
+  disableBiometric,
+  enableBiometric,
+  getLockState,
+  PIN_LENGTH,
+  removePin,
+  setPin,
+  verifyPin,
+} from "../domain/LockState";
 import { AppText, PinPad, ScreenContainer } from "../ui";
 import { colors, spacing } from "../ui/tokens";
 import type { RootStackParamList } from "./navigationTypes";
@@ -47,6 +56,42 @@ export function SetupPinScreen({ navigation, route }: Props): ReactElement {
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
   const processingRef = useRef(false);
+
+  // ── Biometric toggle state ──────────────────────────────────────────
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(true);
+  const [biometricChecked, setBiometricChecked] = useState(false);
+
+  useEffect(() => {
+    if (mode === "remove") return;
+
+    const check = async (): Promise<void> => {
+      const state = getLockState();
+      setBiometricEnabled(state.isBiometricEnabled);
+      const available = await checkBiometricAvailability();
+      setBiometricAvailable(available);
+      setBiometricChecked(true);
+    };
+    void check();
+  }, [mode]);
+
+  const handleBiometricToggle = useCallback(
+    async (value: boolean): Promise<void> => {
+      if (value) {
+        const available = await checkBiometricAvailability();
+        if (!available) {
+          setBiometricAvailable(false);
+          return;
+        }
+        await enableBiometric();
+        setBiometricEnabled(true);
+      } else {
+        await disableBiometric();
+        setBiometricEnabled(false);
+      }
+    },
+    [],
+  );
 
   const heading = getHeading(mode);
 
@@ -172,6 +217,25 @@ export function SetupPinScreen({ navigation, route }: Props): ReactElement {
             {error}
           </AppText>
         )}
+
+        {mode !== "remove" && biometricChecked && (
+          <View style={styles.biometricSection}>
+            <View style={styles.biometricRow}>
+              <AppText variant="body">Use biometric unlock</AppText>
+              <Switch
+                value={biometricEnabled}
+                onValueChange={(v) => void handleBiometricToggle(v)}
+                disabled={!biometricAvailable}
+                accessibilityLabel="Toggle biometric unlock"
+              />
+            </View>
+            {!biometricAvailable && (
+              <AppText variant="caption" style={styles.biometricCaption}>
+                Biometric not available on this device
+              </AppText>
+            )}
+          </View>
+        )}
       </View>
     </ScreenContainer>
   );
@@ -197,5 +261,19 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginTop: spacing.md,
     textAlign: "center",
+  },
+  biometricSection: {
+    marginTop: spacing.xl,
+    width: "100%",
+    paddingHorizontal: spacing.md,
+  },
+  biometricRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  biometricCaption: {
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
 });
