@@ -1,0 +1,85 @@
+/**
+ * Design tokens for FlowCycle.
+ * Light theme only (dark mode deferred to v0.4).
+ * System fonts only — no custom font loading.
+ */
+
+// ─── Colors ──────────────────────────────────────────────────────────
+
+export const colors = {
+  primary: "#D4738C", // Dusty Rose
+  primaryFg: "#FFFFFF", // White on primary
+  secondary: "#8FB5A3", // Sage Green
+  background: "#FAFAF8", // Warm White
+  surface: "#FFFFFF", // Card / Sheet White
+  text: "#2D2D2D", // Dark Slate
+  textMuted: "#7A7A7A", // Gray
+  error: "#C75450", // Muted Red
+  errorBg: "#FDF0EF", // Light red tint for banners
+  border: "#E5E5E3", // Light Gray
+  accent: "#E8C87A", // Warm Gold (use sparingly)
+  disabled: "#BFBFBF", // Disabled elements
+  disabledBg: "#F0F0EE", // Disabled button background
+} as const;
+
+// ─── Spacing (4px grid) ─────────────────────────────────────────────
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+} as const;
+
+// ─── Typography ─────────────────────────────────────────────────────
+
+export type TypographyRole =
+  | "heading"
+  | "subheading"
+  | "body"
+  | "caption"
+  | "label"
+  | "number";
+
+export const typography: Record<
+  TypographyRole,
+  { fontSize: number; fontWeight: "400" | "500" | "600" | "700"; lineHeight: number }
+> = {
+  heading: { fontSize: 24, fontWeight: "700", lineHeight: 32 },
+  subheading: { fontSize: 18, fontWeight: "600", lineHeight: 26 },
+  body: { fontSize: 16, fontWeight: "400", lineHeight: 24 },
+  caption: { fontSize: 13, fontWeight: "400", lineHeight: 18 },
+  label: { fontSize: 14, fontWeight: "500", lineHeight: 20 },
+  number: { fontSize: 32, fontWeight: "700", lineHeight: 40 },
+} as const;
+
+// ─── Border Radii ───────────────────────────────────────────────────
+
+export const radii = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+  full: 9999,
+} as const;
+
+// ─── Elevation / Shadows ────────────────────────────────────────────
+
+export const elevation = {
+  0: {},
+  1: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2, // Android
+  },
+  2: {
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4, // Android
+  },
+} as const;
