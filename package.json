@@ -16,6 +16,7 @@
     "expo": "~54.0.33",
     "expo-crypto": "~15.0.8",
     "expo-dev-client": "~6.0.20",
+    "expo-local-authentication": "~17.0.8",
     "expo-notifications": "~0.32.16",
     "expo-secure-store": "~15.0.8",
     "expo-sqlite": "~16.0.10",
