@@ -3,12 +3,14 @@ import "react-native-gesture-handler";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { getRepository } from "./src/db";
 import { loadActiveProfileId } from "./src/domain/AppState";
+import { getLockState, initLockState } from "./src/domain/LockState";
 import { CycleLogScreen } from "./src/screens/CycleLogScreen";
+import { LockScreen } from "./src/screens/LockScreen";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
 import { SummaryScreen } from "./src/screens/SummaryScreen";
 import { RootStackParamList } from "./src/screens/navigationTypes";
@@ -31,6 +33,7 @@ const navTheme = {
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -48,7 +51,15 @@ export default function App() {
         console.error("Failed to load active profile id", error);
       }
 
+      try {
+        await initLockState();
+      } catch (error) {
+        console.error("Failed to initialize lock state", error);
+      }
+
       if (isMounted) {
+        const state = getLockState();
+        setIsLocked(state.isLocked);
         setIsReady(true);
       }
     };
@@ -60,10 +71,23 @@ export default function App() {
     };
   }, []);
 
+  const handleUnlock = useCallback(() => {
+    setIsLocked(false);
+  }, []);
+
   if (!isReady) {
     return (
       <SafeAreaProvider>
         <LoadingIndicator />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (isLocked) {
+    return (
+      <SafeAreaProvider>
+        <LockScreen onUnlock={handleUnlock} />
+        <StatusBar style="dark" />
       </SafeAreaProvider>
     );
   }
