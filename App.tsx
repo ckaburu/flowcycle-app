@@ -9,9 +9,14 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { getRepository } from "./src/db";
 import { loadActiveProfileId } from "./src/domain/AppState";
 import { getLockState, initLockState } from "./src/domain/LockState";
+import {
+  loadOnboardingCompleted,
+  isOnboardingCompleted as getOnboardingCompleted,
+} from "./src/domain/OnboardingState";
 import { useAppLock } from "./src/hooks/useAppLock";
 import { CycleLogScreen } from "./src/screens/CycleLogScreen";
 import { LockScreen } from "./src/screens/LockScreen";
+import { OnboardingFlow } from "./src/screens/OnboardingFlow";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
 import { SetupPinScreen } from "./src/screens/SetupPinScreen";
 import { SummaryScreen } from "./src/screens/SummaryScreen";
@@ -36,6 +41,8 @@ const navTheme = {
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { isLocked, setIsLocked } = useAppLock();
+  const [hasPinSet, setHasPinSet] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true); // default true to avoid flash
 
   useEffect(() => {
     let isMounted = true;
@@ -59,9 +66,17 @@ export default function App() {
         console.error("Failed to initialize lock state", error);
       }
 
+      try {
+        await loadOnboardingCompleted();
+      } catch (error) {
+        console.error("Failed to load onboarding state", error);
+      }
+
       if (isMounted) {
         const state = getLockState();
+        setHasPinSet(state.isPinSet);
         setIsLocked(state.isLocked);
+        setOnboardingCompleted(getOnboardingCompleted());
         setIsReady(true);
       }
     };
@@ -77,6 +92,11 @@ export default function App() {
     setIsLocked(false);
   }, [setIsLocked]);
 
+  const handleOnboardingComplete = useCallback(() => {
+    setOnboardingCompleted(true);
+  }, []);
+
+  // ─── Gate 1: Bootstrap not complete → show loading ─────────────────
   if (!isReady) {
     return (
       <SafeAreaProvider>
@@ -85,7 +105,10 @@ export default function App() {
     );
   }
 
-  if (isLocked) {
+  // ─── Gate 2: PIN exists AND app is locked → show lock screen ───────
+  //     Skipped when no PIN exists (first launch), preventing
+  //     LockScreen from ever flashing before onboarding.
+  if (hasPinSet && isLocked) {
     return (
       <SafeAreaProvider>
         <LockScreen onUnlock={handleUnlock} />
@@ -94,6 +117,18 @@ export default function App() {
     );
   }
 
+  // ─── Gate 3: Onboarding not completed → show onboarding flow ───────
+  //     Reached on first launch (no PIN) or after unlock on crash recovery.
+  if (!onboardingCompleted) {
+    return (
+      <SafeAreaProvider>
+        <OnboardingFlow onComplete={handleOnboardingComplete} />
+        <StatusBar style="dark" />
+      </SafeAreaProvider>
+    );
+  }
+
+  // ─── Gate 4: All gates passed → show main app ─────────────────────
   return (
     <SafeAreaProvider>
       <NavigationContainer theme={navTheme}>
