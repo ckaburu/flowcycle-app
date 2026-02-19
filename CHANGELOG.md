@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.4-meaningful-notifications
+- Added three-layer notification architecture: Domain → Reconciliation → Infrastructure.
+- Added `NotificationPreference` to `Repository` interface with `MemoryRepo`, `RealmRepo`, and `SQLiteRepo` implementations.
+- Added `NotificationPreferenceSchema` to Realm with schema version 2 (additive migration, no data transformation).
+- Added `NotificationAdapter` interface with `MemoryNotificationAdapter` (testing) and `ExpoNotificationAdapter` (production).
+- Added `notificationPlan.ts` domain module: deterministic ID generation (`fc-remind-{profileId}-{dateIso}`), multi-cycle forecasting (MVP-constrained to `maxReminders=1`).
+- Added `reconcileNotifications.ts` reconciliation layer: diff-based scheduling with past-fire-date filtering, structured `SyncLogger` interface.
+- Added `syncNotifications.ts` orchestrator: single entry point coordinating repo → domain → reconciliation → adapter.
+- Added `devSyncLogger` for DEV-only structured logging with `[NotifSync]` prefix.
+- Added Notifications section to `SettingsScreen` with period reminder toggle and cycle day display.
+- Wired fire-and-forget `syncNotifications` into `App.tsx` bootstrap, `SettingsScreen` toggle, `DashboardScreen` quick-log, and `CycleLogScreen` add-cycle.
+- Added ADR 0006: notification preference storage and adapter pattern decisions.
+- Added migration tests: 3 automated (MemoryRepo contract proxy) + 3 manual (Realm-specific).
+
 ## v0.3-5-navigation-restructure
 - Added bottom tab navigation with three tabs: Dashboard, Profiles, Settings.
 - Added `@react-navigation/bottom-tabs` dependency.
