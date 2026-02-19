@@ -21,3 +21,6 @@ export { LoadingIndicator } from "./LoadingIndicator";
 
 // Lock
 export { PinPad } from "./PinPad";
+
+// Dashboard
+export { ProfileAvatar } from "./ProfileAvatar";
