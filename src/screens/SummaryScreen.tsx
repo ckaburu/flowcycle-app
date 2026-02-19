@@ -1,3 +1,4 @@
+// TODO: delete in v0.3-5
 import type { ReactElement } from "react";
 import * as Notifications from "expo-notifications";
 import { useFocusEffect } from "@react-navigation/native";
@@ -43,6 +44,7 @@ type SummaryData = {
 
 const repository = getRepository();
 
+/** @deprecated v0.3-4 — replaced by DashboardScreen. Remove in v0.3-5. */
 export function SummaryScreen({ navigation }: Props): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

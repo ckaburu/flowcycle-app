@@ -18,6 +18,7 @@ export const colors = {
   errorBg: "#FDF0EF", // Light red tint for banners
   border: "#E5E5E3", // Light Gray
   accent: "#E8C87A", // Warm Gold (use sparingly)
+  warning: "#E09640", // Amber/Orange (overflow indicator)
   disabled: "#BFBFBF", // Disabled elements
   disabledBg: "#F0F0EE", // Disabled button background
 } as const;
