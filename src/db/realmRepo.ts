@@ -3,13 +3,14 @@ import * as SecureStore from "expo-secure-store";
 import Realm from "realm";
 
 import { assertIsoDate } from "../utils/date";
-import { CycleStart, Profile, Repository } from "./repo";
+import { CycleStart, NotificationPreference, Profile, Repository } from "./repo";
 
 const REALM_PATH = "flowcycle.realm";
 const REALM_KEY_STORE_NAME = "realm_encryption_key_v1";
 
 const PROFILE_SCHEMA_NAME = "Profile";
 const CYCLE_START_SCHEMA_NAME = "CycleStart";
+const NOTIFICATION_PREFERENCE_SCHEMA_NAME = "NotificationPreference";
 
 const ProfileSchema: Realm.ObjectSchema = {
   name: PROFILE_SCHEMA_NAME,
@@ -29,6 +30,16 @@ const CycleStartSchema: Realm.ObjectSchema = {
     profileId: { type: "int", indexed: true },
     startDateIso: "string",
     createdAt: "string",
+  },
+};
+
+const NotificationPreferenceSchema: Realm.ObjectSchema = {
+  name: NOTIFICATION_PREFERENCE_SCHEMA_NAME,
+  primaryKey: "profileId",
+  properties: {
+    profileId: "int",
+    enabled: "bool",
+    daysBefore: "int",
   },
 };
 
@@ -77,6 +88,12 @@ type CycleStartRecord = Realm.Object & {
   createdAt: string;
 };
 
+type NotificationPreferenceRecord = Realm.Object & {
+  profileId: number;
+  enabled: boolean;
+  daysBefore: number;
+};
+
 class RealmRepo implements Repository {
   private realm: Realm | null = null;
   private initPromise: Promise<void> | null = null;
@@ -117,12 +134,34 @@ class RealmRepo implements Repository {
   private async openRealm(): Promise<void> {
     const encryptionKey = await this.getOrCreateEncryptionKey();
 
-    this.realm = await Realm.open({
+    const realmConfig: Realm.Configuration = {
       path: REALM_PATH,
-      schema: [ProfileSchema, CycleStartSchema],
-      schemaVersion: 1,
+      schema: [ProfileSchema, CycleStartSchema, NotificationPreferenceSchema],
+      schemaVersion: 2,
       encryptionKey,
-    });
+      onMigration: (oldRealm: Realm, _newRealm: Realm) => {
+        if (oldRealm.schemaVersion < 2) {
+          // Additive migration: new object type only.
+          // Realm auto-creates the NotificationPreference table.
+          // No data transformation required.
+        }
+      },
+    };
+
+    try {
+      this.realm = await Realm.open(realmConfig);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isMigrationError =
+        message.includes("migration") || message.includes("schema version");
+      if (isMigrationError) {
+        console.error("[Realm] Migration failed, deleting and recreating:", error);
+        Realm.deleteFile(realmConfig);
+        this.realm = await Realm.open(realmConfig);
+      } else {
+        throw error;
+      }
+    }
   }
 
   async init(): Promise<void> {
@@ -177,8 +216,15 @@ class RealmRepo implements Repository {
       const cycleStarts = realm
         .objects<CycleStartRecord>(CYCLE_START_SCHEMA_NAME)
         .filtered("profileId == $0", id);
+      const pref = realm.objectForPrimaryKey<NotificationPreferenceRecord>(
+        NOTIFICATION_PREFERENCE_SCHEMA_NAME,
+        id,
+      );
 
       realm.delete(cycleStarts);
+      if (pref) {
+        realm.delete(pref);
+      }
       if (profile) {
         realm.delete(profile);
       }
@@ -227,11 +273,75 @@ class RealmRepo implements Repository {
     return Array.from(entries);
   }
 
+  async getNotificationPreference(profileId: number): Promise<NotificationPreference | null> {
+    await this.init();
+    const realm = this.getRealmOrThrow();
+
+    const record = realm.objectForPrimaryKey<NotificationPreferenceRecord>(
+      NOTIFICATION_PREFERENCE_SCHEMA_NAME,
+      profileId,
+    );
+    if (!record) {
+      return null;
+    }
+    return { profileId: record.profileId, enabled: record.enabled, daysBefore: record.daysBefore };
+  }
+
+  async setNotificationPreference(
+    profileId: number,
+    enabled: boolean,
+    daysBefore: number,
+  ): Promise<NotificationPreference> {
+    await this.init();
+    const realm = this.getRealmOrThrow();
+
+    const pref: NotificationPreference = { profileId, enabled, daysBefore };
+    realm.write(() => {
+      realm.create(
+        NOTIFICATION_PREFERENCE_SCHEMA_NAME,
+        pref,
+        Realm.UpdateMode.Modified,
+      );
+    });
+    return { ...pref };
+  }
+
+  async deleteNotificationPreference(profileId: number): Promise<void> {
+    await this.init();
+    const realm = this.getRealmOrThrow();
+
+    realm.write(() => {
+      const record = realm.objectForPrimaryKey<NotificationPreferenceRecord>(
+        NOTIFICATION_PREFERENCE_SCHEMA_NAME,
+        profileId,
+      );
+      if (record) {
+        realm.delete(record);
+      }
+    });
+  }
+
+  async listNotificationPreferences(): Promise<NotificationPreference[]> {
+    await this.init();
+    const realm = this.getRealmOrThrow();
+
+    const entries = realm
+      .objects<NotificationPreferenceRecord>(NOTIFICATION_PREFERENCE_SCHEMA_NAME)
+      .map((entry) => ({
+        profileId: entry.profileId,
+        enabled: entry.enabled,
+        daysBefore: entry.daysBefore,
+      }));
+
+    return Array.from(entries);
+  }
+
   async clearAllForTesting(): Promise<void> {
     await this.init();
     const realm = this.getRealmOrThrow();
 
     realm.write(() => {
+      realm.delete(realm.objects(NOTIFICATION_PREFERENCE_SCHEMA_NAME));
       realm.delete(realm.objects(CYCLE_START_SCHEMA_NAME));
       realm.delete(realm.objects(PROFILE_SCHEMA_NAME));
     });

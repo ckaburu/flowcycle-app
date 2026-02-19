@@ -1,7 +1,7 @@
 import { SQLiteDatabase, openDatabaseAsync } from "expo-sqlite";
 
 import { assertIsoDate } from "../utils/date";
-import { CycleStart, Profile, Repository } from "./repo";
+import { CycleStart, NotificationPreference, Profile, Repository } from "./repo";
 
 type ProfileRow = {
   id: number;
@@ -14,6 +14,12 @@ type CycleStartRow = {
   profile_id: number;
   start_date: string;
   created_at: string;
+};
+
+type NotificationPreferenceRow = {
+  profile_id: number;
+  enabled: number; // SQLite stores booleans as 0/1
+  days_before: number;
 };
 
 function nowIsoTimestamp(): string {
@@ -55,6 +61,15 @@ class SQLiteRepo implements Repository {
         profile_id INTEGER NOT NULL,
         start_date TEXT NOT NULL,
         created_at TEXT NOT NULL,
+        FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+      );
+    `);
+
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS notification_preferences (
+        profile_id INTEGER PRIMARY KEY,
+        enabled INTEGER NOT NULL DEFAULT 0,
+        days_before INTEGER NOT NULL DEFAULT 1,
         FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
       );
     `);
@@ -157,9 +172,72 @@ class SQLiteRepo implements Repository {
     }));
   }
 
+  async getNotificationPreference(profileId: number): Promise<NotificationPreference | null> {
+    await this.init();
+    const db = await this.getDb();
+
+    const row = await db.getFirstAsync<NotificationPreferenceRow>(
+      "SELECT profile_id, enabled, days_before FROM notification_preferences WHERE profile_id = ?;",
+      profileId
+    );
+
+    if (!row) return null;
+
+    return {
+      profileId: row.profile_id,
+      enabled: row.enabled === 1,
+      daysBefore: row.days_before,
+    };
+  }
+
+  async setNotificationPreference(
+    profileId: number,
+    enabled: boolean,
+    daysBefore: number
+  ): Promise<NotificationPreference> {
+    await this.init();
+    const db = await this.getDb();
+
+    await db.runAsync(
+      `INSERT INTO notification_preferences (profile_id, enabled, days_before)
+       VALUES (?, ?, ?)
+       ON CONFLICT(profile_id) DO UPDATE SET enabled = excluded.enabled, days_before = excluded.days_before;`,
+      profileId,
+      enabled ? 1 : 0,
+      daysBefore
+    );
+
+    return { profileId, enabled, daysBefore };
+  }
+
+  async deleteNotificationPreference(profileId: number): Promise<void> {
+    await this.init();
+    const db = await this.getDb();
+    await db.runAsync(
+      "DELETE FROM notification_preferences WHERE profile_id = ?;",
+      profileId
+    );
+  }
+
+  async listNotificationPreferences(): Promise<NotificationPreference[]> {
+    await this.init();
+    const db = await this.getDb();
+
+    const rows = await db.getAllAsync<NotificationPreferenceRow>(
+      "SELECT profile_id, enabled, days_before FROM notification_preferences ORDER BY profile_id ASC;"
+    );
+
+    return rows.map((row) => ({
+      profileId: row.profile_id,
+      enabled: row.enabled === 1,
+      daysBefore: row.days_before,
+    }));
+  }
+
   async clearAllForTesting(): Promise<void> {
     await this.init();
     const db = await this.getDb();
+    await db.runAsync("DELETE FROM notification_preferences;");
     await db.runAsync("DELETE FROM cycle_starts;");
     await db.runAsync("DELETE FROM profiles;");
   }
