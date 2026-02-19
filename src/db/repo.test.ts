@@ -47,4 +47,67 @@ describe("memoryRepo", () => {
     expect(profiles).toHaveLength(0);
     expect(cycleStarts).toHaveLength(0);
   });
+
+  // ── Notification Preference tests (v0.4) ──────────────────────────
+
+  it("create preference then read back", async () => {
+    const profile = await memoryRepo.createProfile("Eva");
+    const pref = await memoryRepo.setNotificationPreference(profile.id, true, 1);
+
+    expect(pref).toEqual({ profileId: profile.id, enabled: true, daysBefore: 1 });
+
+    const read = await memoryRepo.getNotificationPreference(profile.id);
+    expect(read).toEqual({ profileId: profile.id, enabled: true, daysBefore: 1 });
+  });
+
+  it("update existing preference (upsert)", async () => {
+    const profile = await memoryRepo.createProfile("Faye");
+    await memoryRepo.setNotificationPreference(profile.id, true, 1);
+    const updated = await memoryRepo.setNotificationPreference(profile.id, false, 2);
+
+    expect(updated).toEqual({ profileId: profile.id, enabled: false, daysBefore: 2 });
+
+    const read = await memoryRepo.getNotificationPreference(profile.id);
+    expect(read).toEqual({ profileId: profile.id, enabled: false, daysBefore: 2 });
+  });
+
+  it("delete preference", async () => {
+    const profile = await memoryRepo.createProfile("Gina");
+    await memoryRepo.setNotificationPreference(profile.id, true, 1);
+    await memoryRepo.deleteNotificationPreference(profile.id);
+
+    const read = await memoryRepo.getNotificationPreference(profile.id);
+    expect(read).toBeNull();
+  });
+
+  it("list all preferences", async () => {
+    const p1 = await memoryRepo.createProfile("Hana");
+    const p2 = await memoryRepo.createProfile("Ivy");
+    await memoryRepo.setNotificationPreference(p1.id, true, 1);
+    await memoryRepo.setNotificationPreference(p2.id, false, 3);
+
+    const all = await memoryRepo.listNotificationPreferences();
+    expect(all).toHaveLength(2);
+    expect(all).toEqual(
+      expect.arrayContaining([
+        { profileId: p1.id, enabled: true, daysBefore: 1 },
+        { profileId: p2.id, enabled: false, daysBefore: 3 },
+      ]),
+    );
+  });
+
+  it("deleteProfile cascades notification preference", async () => {
+    const profile = await memoryRepo.createProfile("Jade");
+    await memoryRepo.setNotificationPreference(profile.id, true, 1);
+
+    await memoryRepo.deleteProfile(profile.id);
+
+    const pref = await memoryRepo.getNotificationPreference(profile.id);
+    expect(pref).toBeNull();
+  });
+
+  it("get non-existent preference returns null", async () => {
+    const pref = await memoryRepo.getNotificationPreference(9999);
+    expect(pref).toBeNull();
+  });
 });

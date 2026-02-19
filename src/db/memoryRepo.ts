@@ -1,5 +1,5 @@
 import { assertIsoDate } from "../utils/date";
-import { CycleStart, Profile, Repository } from "./repo";
+import { CycleStart, NotificationPreference, Profile, Repository } from "./repo";
 
 function nowIsoTimestamp(): string {
   return new Date().toISOString();
@@ -8,6 +8,7 @@ function nowIsoTimestamp(): string {
 class MemoryRepo implements Repository {
   private profiles: Profile[] = [];
   private cycleStarts: CycleStart[] = [];
+  private notificationPreferences: NotificationPreference[] = [];
   private nextProfileId = 1;
   private nextCycleStartId = 1;
 
@@ -33,6 +34,9 @@ class MemoryRepo implements Repository {
   async deleteProfile(id: number): Promise<void> {
     this.profiles = this.profiles.filter((profile) => profile.id !== id);
     this.cycleStarts = this.cycleStarts.filter((entry) => entry.profileId !== id);
+    this.notificationPreferences = this.notificationPreferences.filter(
+      (pref) => pref.profileId !== id,
+    );
   }
 
   async addCycleStart(profileId: number, startDateIso: string): Promise<CycleStart> {
@@ -60,9 +64,40 @@ class MemoryRepo implements Repository {
       .map((entry) => ({ ...entry }));
   }
 
+  async getNotificationPreference(profileId: number): Promise<NotificationPreference | null> {
+    const pref = this.notificationPreferences.find((p) => p.profileId === profileId);
+    return pref ? { ...pref } : null;
+  }
+
+  async setNotificationPreference(
+    profileId: number,
+    enabled: boolean,
+    daysBefore: number,
+  ): Promise<NotificationPreference> {
+    const existing = this.notificationPreferences.findIndex((p) => p.profileId === profileId);
+    const pref: NotificationPreference = { profileId, enabled, daysBefore };
+    if (existing >= 0) {
+      this.notificationPreferences[existing] = pref;
+    } else {
+      this.notificationPreferences.push(pref);
+    }
+    return { ...pref };
+  }
+
+  async deleteNotificationPreference(profileId: number): Promise<void> {
+    this.notificationPreferences = this.notificationPreferences.filter(
+      (p) => p.profileId !== profileId,
+    );
+  }
+
+  async listNotificationPreferences(): Promise<NotificationPreference[]> {
+    return this.notificationPreferences.map((p) => ({ ...p }));
+  }
+
   async clearAllForTesting(): Promise<void> {
     this.profiles = [];
     this.cycleStarts = [];
+    this.notificationPreferences = [];
     this.nextProfileId = 1;
     this.nextCycleStartId = 1;
   }
