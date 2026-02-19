@@ -15,6 +15,7 @@ import {
 } from "./src/domain/OnboardingState";
 import { useAppLock } from "./src/hooks/useAppLock";
 import { CycleLogScreen } from "./src/screens/CycleLogScreen";
+import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { LockScreen } from "./src/screens/LockScreen";
 import { OnboardingFlow } from "./src/screens/OnboardingFlow";
 import { ProfilesScreen } from "./src/screens/ProfilesScreen";
@@ -133,7 +134,7 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer theme={navTheme}>
         <Stack.Navigator
-          initialRouteName="Profiles"
+          initialRouteName="Dashboard"
           screenOptions={{
             headerStyle: { backgroundColor: colors.surface },
             headerTintColor: colors.primary,
@@ -141,6 +142,11 @@ export default function App() {
             contentStyle: { backgroundColor: colors.background },
           }}
         >
+          <Stack.Screen
+            name="Dashboard"
+            component={DashboardScreen}
+            options={{ title: "Dashboard" }}
+          />
           <Stack.Screen name="Profiles" component={ProfilesScreen} />
           <Stack.Screen
             name="CycleLog"
