@@ -24,3 +24,4 @@ export { PinPad } from "./PinPad";
 
 // Dashboard
 export { ProfileAvatar } from "./ProfileAvatar";
+export { CycleDayRing } from "./CycleDayRing";
