@@ -16,9 +16,9 @@ import {
 } from "../domain/LockState";
 import { AppText, PinPad, ScreenContainer } from "../ui";
 import { colors, spacing } from "../ui/tokens";
-import type { RootStackParamList } from "./navigationTypes";
+import type { SettingsStackParamList } from "../navigation/types";
 
-type Props = NativeStackScreenProps<RootStackParamList, "SetupPin">;
+type Props = NativeStackScreenProps<SettingsStackParamList, "SetupPin">;
 
 type Step = "enter-current" | "enter-new" | "confirm-new";
 

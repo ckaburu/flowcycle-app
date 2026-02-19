@@ -6,7 +6,6 @@ import { StyleSheet, View } from "react-native";
 
 import { getRepository } from "../db";
 import { CycleStart, Profile } from "../db/repo";
-import { saveActiveProfileId } from "../domain/AppState";
 import { isValidIsoDate } from "../utils/date";
 import {
   AppButton,
@@ -20,13 +19,13 @@ import {
   colors,
   spacing,
 } from "../ui";
-import { RootStackParamList } from "./navigationTypes";
+import type { ProfilesStackParamList } from "../navigation/types";
 
-type Props = NativeStackScreenProps<RootStackParamList, "CycleLog">;
+type Props = NativeStackScreenProps<ProfilesStackParamList, "CycleLog">;
 
 const repository = getRepository();
 
-export function CycleLogScreen({ navigation, route }: Props): ReactElement {
+export function CycleLogScreen({ route }: Props): ReactElement {
   const profileId = route.params.profileId;
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -85,11 +84,6 @@ export function CycleLogScreen({ navigation, route }: Props): ReactElement {
     }
   };
 
-  const onBackToProfiles = async (): Promise<void> => {
-    await saveActiveProfileId(null);
-    navigation.navigate("Profiles");
-  };
-
   return (
     <ScreenContainer>
       <AppText variant="heading" style={styles.title}>
@@ -98,23 +92,6 @@ export function CycleLogScreen({ navigation, route }: Props): ReactElement {
       <AppText variant="subheading" color={colors.textMuted} style={styles.subtitle}>
         {profile ? profile.name : `Profile ${profileId}`}
       </AppText>
-
-      <View style={styles.navRow}>
-        <AppButton
-          title="Back to Profiles"
-          variant="ghost"
-          onPress={() => {
-            void onBackToProfiles();
-          }}
-          style={styles.navButton}
-        />
-        <AppButton
-          title="View Summary"
-          variant="secondary"
-          onPress={() => navigation.navigate("Summary")}
-          style={styles.navButton}
-        />
-      </View>
 
       {error ? (
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
@@ -161,14 +138,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginBottom: spacing.md,
-  },
-  navRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  navButton: {
-    flex: 1,
   },
   entryCard: {
     marginBottom: spacing.sm,

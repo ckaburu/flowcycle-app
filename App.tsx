@@ -1,7 +1,6 @@
 import "react-native-gesture-handler";
 
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -14,18 +13,12 @@ import {
   isOnboardingCompleted as getOnboardingCompleted,
 } from "./src/domain/OnboardingState";
 import { useAppLock } from "./src/hooks/useAppLock";
-import { CycleLogScreen } from "./src/screens/CycleLogScreen";
-import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { LockScreen } from "./src/screens/LockScreen";
 import { OnboardingFlow } from "./src/screens/OnboardingFlow";
-import { ProfilesScreen } from "./src/screens/ProfilesScreen";
-import { SetupPinScreen } from "./src/screens/SetupPinScreen";
-import { SummaryScreen } from "./src/screens/SummaryScreen";
-import { RootStackParamList } from "./src/screens/navigationTypes";
+import { TabNavigator } from "./src/navigation/TabNavigator";
 import { LoadingIndicator, colors } from "./src/ui";
 
 const repository = getRepository();
-const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const navTheme = {
   ...DefaultTheme,
@@ -133,33 +126,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer theme={navTheme}>
-        <Stack.Navigator
-          initialRouteName="Dashboard"
-          screenOptions={{
-            headerStyle: { backgroundColor: colors.surface },
-            headerTintColor: colors.primary,
-            headerTitleStyle: { color: colors.text, fontWeight: "600" },
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        >
-          <Stack.Screen
-            name="Dashboard"
-            component={DashboardScreen}
-            options={{ title: "Dashboard" }}
-          />
-          <Stack.Screen name="Profiles" component={ProfilesScreen} />
-          <Stack.Screen
-            name="CycleLog"
-            component={CycleLogScreen}
-            options={{ title: "Cycle Log" }}
-          />
-          <Stack.Screen name="Summary" component={SummaryScreen} />
-          <Stack.Screen
-            name="SetupPin"
-            component={SetupPinScreen}
-            options={{ title: "PIN Settings" }}
-          />
-        </Stack.Navigator>
+        <TabNavigator />
         <StatusBar style="dark" />
       </NavigationContainer>
     </SafeAreaProvider>

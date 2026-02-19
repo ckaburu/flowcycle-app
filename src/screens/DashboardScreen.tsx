@@ -1,5 +1,7 @@
 import { useState, type ReactElement } from "react";
 import { StyleSheet, View } from "react-native";
+import type { CompositeScreenProps } from "@react-navigation/native";
+import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { AppButton } from "../ui/AppButton";
@@ -18,11 +20,14 @@ import { quickLogCycleStart } from "../domain/quickLogCycleStart";
 import { formatIsoDate } from "../domain/cycleMath";
 import { getRepository } from "../db";
 
-import type { RootStackParamList } from "./navigationTypes";
+import type { DashboardStackParamList, TabParamList } from "../navigation/types";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-type Props = NativeStackScreenProps<RootStackParamList, "Dashboard">;
+type Props = CompositeScreenProps<
+  NativeStackScreenProps<DashboardStackParamList, "Dashboard">,
+  BottomTabScreenProps<TabParamList>
+>;
 
 // ─── Component ───────────────────────────────────────────────────────
 
@@ -47,12 +52,15 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
   };
 
   const handleNavigateProfiles = (): void => {
-    navigation.navigate("Profiles");
+    navigation.navigate("ProfilesTab", { screen: "Profiles" });
   };
 
   const handleNavigateCycleLog = (): void => {
     if (data) {
-      navigation.navigate("CycleLog", { profileId: data.profileId });
+      navigation.navigate("ProfilesTab", {
+        screen: "CycleLog",
+        params: { profileId: data.profileId },
+      });
     }
   };
 
