@@ -18,6 +18,9 @@ import { colors, spacing } from "../ui/tokens";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { quickLogCycleStart } from "../domain/quickLogCycleStart";
 import { formatIsoDate } from "../domain/cycleMath";
+import { syncNotifications } from "../domain/syncNotifications";
+import { devSyncLogger } from "../domain/devSyncLogger";
+import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
 import { getRepository } from "../db";
 
 import type { DashboardStackParamList, TabParamList } from "../navigation/types";
@@ -46,6 +49,13 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
     );
     if (result.status === "created") {
       refresh();
+
+      // Fire-and-forget: re-sync notifications after period log
+      syncNotifications(
+        getRepository(),
+        new ExpoNotificationAdapter(),
+        __DEV__ ? devSyncLogger : undefined,
+      ).catch((err) => console.error("[NotifSync] sync failed:", err));
     } else {
       setLogError("A cycle start already exists for today.");
     }

@@ -7,6 +7,9 @@ import { InteractionManager, Pressable, StyleSheet, View } from "react-native";
 import { getRepository } from "../db";
 import { Profile } from "../db/repo";
 import { saveActiveProfileId } from "../domain/AppState";
+import { syncNotifications } from "../domain/syncNotifications";
+import { devSyncLogger } from "../domain/devSyncLogger";
+import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
 import {
   AppButton,
   AppCard,
@@ -75,6 +78,13 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
       setError(null);
       await saveActiveProfileId(profileId);
       navigation.navigate("CycleLog", { profileId });
+
+      // Fire-and-forget: re-sync notifications after profile switch
+      syncNotifications(
+        repository,
+        new ExpoNotificationAdapter(),
+        __DEV__ ? devSyncLogger : undefined,
+      ).catch((err) => console.error("[NotifSync] sync failed:", err));
     } catch {
       setError("Failed to set active profile.");
     }

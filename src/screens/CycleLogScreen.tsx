@@ -6,6 +6,9 @@ import { StyleSheet, View } from "react-native";
 
 import { getRepository } from "../db";
 import { CycleStart, Profile } from "../db/repo";
+import { syncNotifications } from "../domain/syncNotifications";
+import { devSyncLogger } from "../domain/devSyncLogger";
+import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
 import { isValidIsoDate } from "../utils/date";
 import {
   AppButton,
@@ -75,6 +78,13 @@ export function CycleLogScreen({ route }: Props): ReactElement {
       await repository.addCycleStart(profileId, dateValue);
       setStartDateInput("");
       await loadData();
+
+      // Fire-and-forget: re-sync notifications after new cycle start
+      syncNotifications(
+        repository,
+        new ExpoNotificationAdapter(),
+        __DEV__ ? devSyncLogger : undefined,
+      ).catch((err) => console.error("[NotifSync] sync failed:", err));
     } catch (caught) {
       if (caught instanceof Error) {
         setError(caught.message);

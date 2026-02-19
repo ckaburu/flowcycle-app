@@ -12,6 +12,9 @@ import {
   loadOnboardingCompleted,
   isOnboardingCompleted as getOnboardingCompleted,
 } from "./src/domain/OnboardingState";
+import { syncNotifications } from "./src/domain/syncNotifications";
+import { devSyncLogger } from "./src/domain/devSyncLogger";
+import { ExpoNotificationAdapter } from "./src/utils/expoNotificationAdapter";
 import { useAppLock } from "./src/hooks/useAppLock";
 import { LockScreen } from "./src/screens/LockScreen";
 import { OnboardingFlow } from "./src/screens/OnboardingFlow";
@@ -72,6 +75,15 @@ export default function App() {
         setIsLocked(state.isLocked);
         setOnboardingCompleted(getOnboardingCompleted());
         setIsReady(true);
+
+        // Fire-and-forget notification sync after bootstrap
+        syncNotifications(
+          repository,
+          new ExpoNotificationAdapter(),
+          __DEV__ ? devSyncLogger : undefined,
+        ).catch((err) =>
+          console.error("[NotifSync] Bootstrap sync failed:", err),
+        );
       }
     };
 
