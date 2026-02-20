@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- DEV-only notification harness (5s / 30s test scheduling).
+- Cancel-all test utility.
+- ADB validation workflow added to verification.md.
+
 ## v0.4-meaningful-notifications
 - Added three-layer notification architecture: Domain → Reconciliation → Infrastructure.
 - Added `NotificationPreference` to `Repository` interface with `MemoryRepo`, `RealmRepo`, and `SQLiteRepo` implementations.
