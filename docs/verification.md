@@ -455,3 +455,41 @@ grep -E "(NotifSync|fc-remind|schedule|cancel)" flowcycle-validation-f-logcat.tx
 - [ ] No red-box errors
 - [ ] No native crashes
 - [ ] All `[NotifSync]` events have correct ID format with `T{HH:mm}` suffix
+
+---
+
+## v0.4.0-rc1 — Release Candidate Build
+
+| Field | Value |
+|---|---|
+| Tag | `v0.4.0-rc1` |
+| Commit | `49c0cb0` |
+| Build ID | `76a2ef96-6e34-45a2-a96c-b68e6a5e591d` |
+| Profile | preview (distribution: internal) |
+| Platform | Android |
+| Status | FINISHED |
+| APK | https://expo.dev/artifacts/eas/fDFHsQ3z7RFEaKwfQNdwvk.apk |
+| Install link | https://expo.dev/accounts/ckaburu/projects/flowcycle-app/builds/76a2ef96-6e34-45a2-a96c-b68e6a5e591d |
+| Built | 2026-02-20 |
+
+### What's in this RC (vs previous builds)
+
+- Notification ID format includes fire timestamp (`fc-remind-{profileId}-{fireDateIso}T{HH:mm}`)
+- Version bumped to 0.4.0 in app.json + package.json
+- Settings screen reads version from expo-constants (dynamic)
+- 133 tests passing, tsc clean
+
+### Validation
+
+Use **Task F** checklist above with this APK. Replace earlier build references:
+
+```bash
+# Download RC APK
+curl -L -o flowcycle-app-v0.4.0-rc1.apk \
+  "https://expo.dev/artifacts/eas/fDFHsQ3z7RFEaKwfQNdwvk.apk"
+
+# Install
+adb uninstall com.ckaburu.flowcycleapp 2>/dev/null
+adb install flowcycle-app-v0.4.0-rc1.apk
+adb shell am start -n com.ckaburu.flowcycleapp/.MainActivity
+```
