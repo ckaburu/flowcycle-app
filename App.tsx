@@ -3,6 +3,7 @@ import "react-native-gesture-handler";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { getRepository } from "./src/db";
@@ -22,6 +23,7 @@ import { TabNavigator } from "./src/navigation/TabNavigator";
 import { LoadingIndicator, colors } from "./src/ui";
 
 const repository = getRepository();
+const notificationAdapter = new ExpoNotificationAdapter();
 
 const navTheme = {
   ...DefaultTheme,
@@ -79,7 +81,7 @@ export default function App() {
         // Fire-and-forget notification sync after bootstrap
         syncNotifications(
           repository,
-          new ExpoNotificationAdapter(),
+          notificationAdapter,
           __DEV__ ? devSyncLogger : undefined,
         ).catch((err) =>
           console.error("[NotifSync] Bootstrap sync failed:", err),
@@ -89,8 +91,29 @@ export default function App() {
 
     void bootstrap();
 
+    // Re-sync notifications when app returns to foreground.
+    // Handles timezone changes, midnight rollovers, and Doze alarm resets.
+    const appStateRef: { current: AppStateStatus } = { current: AppState.currentState };
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (
+        (appStateRef.current === "background" ||
+          appStateRef.current === "inactive") &&
+        nextState === "active"
+      ) {
+        syncNotifications(
+          repository,
+          notificationAdapter,
+          __DEV__ ? devSyncLogger : undefined,
+        ).catch((err) =>
+          console.error("[NotifSync] Foreground sync failed:", err),
+        );
+      }
+      appStateRef.current = nextState;
+    });
+
     return () => {
       isMounted = false;
+      subscription.remove();
     };
   }, [setIsLocked]);
 
