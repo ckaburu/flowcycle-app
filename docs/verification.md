@@ -493,3 +493,45 @@ adb uninstall com.ckaburu.flowcycleapp 2>/dev/null
 adb install flowcycle-app-v0.4.0-rc1.apk
 adb shell am start -n com.ckaburu.flowcycleapp/.MainActivity
 ```
+
+---
+
+## DEV Test Notification Procedure
+
+Requires a `__DEV__` build (`npx expo run:android`, NOT a preview/production APK).
+The Dev Tools section is only visible in DEV builds and will not appear in release APKs.
+
+### Setup
+
+1. Build and run the dev client: `npx expo run:android`
+2. Complete onboarding (create profile, skip or set PIN)
+3. Log at least 1 period start from the Dashboard
+
+### Test Steps
+
+1. Navigate to **Settings** → scroll to **Dev Tools** section
+2. Tap **"Test notification (5s)"** → notification should appear in ~5 seconds
+3. Tap **"Test notification (30s)"** → notification should appear in ~30 seconds
+4. Tap **"Cancel all notifications"** → clears all scheduled notifications + tracked IDs
+
+### Verification via ADB
+
+```bash
+# Check scheduled alarms (should show flowcycle entries after step 2/3)
+adb shell dumpsys alarm | grep -A 3 "com.ckaburu.flowcycleapp"
+
+# After cancel all (step 4), no flowcycle alarms should remain
+adb shell dumpsys alarm | grep "com.ckaburu.flowcycleapp"
+
+# Monitor notification events in real-time
+adb logcat -s ReactNativeJS:V | grep -i notif
+```
+
+### Expected Behavior
+
+| Action | Result |
+|---|---|
+| Tap 5s button | System notification appears in ~5 seconds with title "FlowCycle Test" |
+| Tap 30s button | System notification appears in ~30 seconds with title "FlowCycle Test" |
+| Tap Cancel all | All scheduled alarms for the app are cleared |
+| Production build | Dev Tools section is not visible |

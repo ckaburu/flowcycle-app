@@ -157,3 +157,47 @@ export function computeNotificationPlan(
 
   return { toSchedule, toCancel };
 }
+
+// ────────────────────────────────────────────
+// DEV-only test helpers
+// ────────────────────────────────────────────
+
+/**
+ * Deterministic ID for test notifications.
+ * Includes seconds to avoid collisions in rapid-fire testing.
+ * Format: fc-test-{profileId}-{YYYY-MM-DD}T{HH:mm:ss}
+ */
+export function makeTestReminderId(
+  profileId: number,
+  fireDate: Date,
+): string {
+  const iso = formatIsoDate(fireDate);
+  const hh = String(fireDate.getHours()).padStart(2, "0");
+  const mm = String(fireDate.getMinutes()).padStart(2, "0");
+  const ss = String(fireDate.getSeconds()).padStart(2, "0");
+  return `fc-test-${profileId}-${iso}T${hh}:${mm}:${ss}`;
+}
+
+/**
+ * Build a single ReminderItem that fires now + delaySeconds.
+ * Pure function — pass `now` for deterministic testing.
+ */
+export function buildTestReminder(
+  profileId: number,
+  profileName: string,
+  delaySeconds: number,
+  now: Date = new Date(),
+): ReminderItem {
+  const fireDate = new Date(now.getTime() + delaySeconds * 1000);
+  const fireDateIso = formatIsoDate(fireDate);
+  return {
+    id: makeTestReminderId(profileId, fireDate),
+    profileId,
+    profileName,
+    targetDateIso: fireDateIso,
+    fireDateIso,
+    daysBefore: 0,
+    title: "FlowCycle Test",
+    body: `Test reminder for ${profileName} (${delaySeconds}s delay)`,
+  };
+}

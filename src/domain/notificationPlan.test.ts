@@ -1,7 +1,9 @@
 import {
   buildNotificationPlan,
+  buildTestReminder,
   computeNotificationPlan,
   makeReminderId,
+  makeTestReminderId,
   type ProfileNotificationInput,
 } from "./notificationPlan";
 
@@ -223,5 +225,53 @@ describe("computeNotificationPlan", () => {
     const plan2 = computeNotificationPlan([enabledProfile], [], todayIso, 1);
 
     expect(plan1).toEqual(plan2);
+  });
+});
+
+// ────────────────────────────────────────────
+// DEV test helpers
+// ────────────────────────────────────────────
+
+describe("makeTestReminderId", () => {
+  it("produces fc-test-{profileId}-{ISO}T{HH:mm:ss} format", () => {
+    const fireDate = new Date(2026, 1, 20, 14, 30, 45); // 2026-02-20 14:30:45
+    const id = makeTestReminderId(1, fireDate);
+    expect(id).toBe("fc-test-1-2026-02-20T14:30:45");
+  });
+
+  it("zero-pads single-digit hours/minutes/seconds", () => {
+    const fireDate = new Date(2026, 0, 5, 9, 5, 3); // 2026-01-05 09:05:03
+    const id = makeTestReminderId(2, fireDate);
+    expect(id).toBe("fc-test-2-2026-01-05T09:05:03");
+  });
+
+  it("same inputs produce same ID (deterministic)", () => {
+    const d = new Date(2026, 1, 20, 10, 0, 0);
+    expect(makeTestReminderId(1, d)).toBe(makeTestReminderId(1, d));
+  });
+});
+
+describe("buildTestReminder", () => {
+  const now = new Date(2026, 1, 20, 14, 0, 0); // 2026-02-20 14:00:00
+
+  it("returns ReminderItem with fire date = now + delay", () => {
+    const item = buildTestReminder(1, "Alice", 30, now);
+    // 14:00:00 + 30s = 14:00:30
+    expect(item.id).toBe("fc-test-1-2026-02-20T14:00:30");
+    expect(item.fireDateIso).toBe("2026-02-20");
+    expect(item.daysBefore).toBe(0);
+    expect(item.title).toBe("FlowCycle Test");
+    expect(item.body).toBe("Test reminder for Alice (30s delay)");
+  });
+
+  it("5-second delay produces correct ID", () => {
+    const item = buildTestReminder(2, "Bob", 5, now);
+    expect(item.id).toBe("fc-test-2-2026-02-20T14:00:05");
+  });
+
+  it("carries profileId and profileName through", () => {
+    const item = buildTestReminder(42, "Carol", 10, now);
+    expect(item.profileId).toBe(42);
+    expect(item.profileName).toBe("Carol");
   });
 });

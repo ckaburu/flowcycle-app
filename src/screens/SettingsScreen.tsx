@@ -7,14 +7,13 @@ import Constants from "expo-constants";
 
 import { isPinSet } from "../domain/LockState";
 import { loadActiveProfileId } from "../domain/AppState";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { syncNotifications } from "../domain/syncNotifications";
 import { devSyncLogger } from "../domain/devSyncLogger";
+import { buildTestReminder } from "../domain/notificationPlan";
 import { getRepository } from "../db";
 import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
-import {
-  requestNotificationPermissions,
-  scheduleTestNotificationInSeconds,
-} from "../utils/notifications";
+import { requestNotificationPermissions } from "../utils/notifications";
 import type { SettingsStackParamList } from "../navigation/types";
 import {
   ListItem,
@@ -117,8 +116,26 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
     );
   }, [activeProfileId, daysBefore, notifEnabled]);
 
-  const handleTestNotification = useCallback(async (): Promise<void> => {
-    await scheduleTestNotificationInSeconds(5);
+  const handleDevNotification = useCallback(
+    async (delaySec: number): Promise<void> => {
+      if (activeProfileId === null) return;
+      const repo = getRepository();
+      const profiles = await repo.listProfiles();
+      const profile = profiles.find((p) => p.id === activeProfileId);
+      if (!profile) return;
+
+      const item = buildTestReminder(activeProfileId, profile.name, delaySec);
+      const adapter = new ExpoNotificationAdapter();
+      const fireDate = new Date(Date.now() + delaySec * 1000);
+      await adapter.schedule(item.id, fireDate, item.title, item.body);
+    },
+    [activeProfileId],
+  );
+
+  const handleDevCancelAll = useCallback(async (): Promise<void> => {
+    const adapter = new ExpoNotificationAdapter();
+    await adapter.cancelAll();
+    await AsyncStorage.removeItem("flowcycle.trackedNotificationIds");
   }, []);
 
   return (
@@ -186,11 +203,24 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
           )}
 
           {__DEV__ && (
-            <ListItem
-              label="🧪 Send Test Notification"
-              onPress={() => void handleTestNotification()}
-              testID="settings-test-notification"
-            />
+            <>
+              <SectionHeader title="Dev Tools" />
+              <ListItem
+                label="🧪 Test notification (5s)"
+                onPress={() => void handleDevNotification(5)}
+                testID="settings-dev-notif-5s"
+              />
+              <ListItem
+                label="🧪 Test notification (30s)"
+                onPress={() => void handleDevNotification(30)}
+                testID="settings-dev-notif-30s"
+              />
+              <ListItem
+                label="🗑️ Cancel all notifications"
+                onPress={() => void handleDevCancelAll()}
+                testID="settings-dev-cancel-all"
+              />
+            </>
           )}
         </>
       )}
