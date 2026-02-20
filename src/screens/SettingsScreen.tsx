@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { InteractionManager, StyleSheet, Switch, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
+import Constants from "expo-constants";
 
 import { isPinSet } from "../domain/LockState";
 import { loadActiveProfileId } from "../domain/AppState";
@@ -24,6 +25,7 @@ import {
 } from "../ui";
 import { colors, spacing } from "../ui/tokens";
 
+const appVersion = Constants.expoConfig?.version ?? "unknown";
 const DAYS_OPTIONS = [1, 2, 3, 5, 7];
 
 type Props = NativeStackScreenProps<SettingsStackParamList, "Settings">;
@@ -195,7 +197,7 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
 
       <SectionHeader title="About" />
 
-      <ListItem label="Version" value="0.3.0" testID="settings-version" />
+      <ListItem label="Version" value={appVersion} testID="settings-version" />
     </ScreenContainer>
   );
 }
