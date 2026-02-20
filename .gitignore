@@ -41,5 +41,5 @@ yarn-error.*
 /android
 
 # workspace / agent context (local only)
-prompts.md
-PROJECT_STATE.md
+/prompts.md
+/PROJECT_STATE.md
