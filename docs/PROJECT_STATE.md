@@ -11,13 +11,13 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.4.0 (`app.json`, `package.json`) — v0.4.1 pending release |
+| Version | 0.4.1 (stable) |
 | Branch | `feature/encryption` (sole active branch) |
 | Tests | 139 passed, 3 todo (Realm-specific manual), 0 failures |
 | Types | `tsc --noEmit` clean |
-| Tag | `v0.4.0-rc1` at `49c0cb0` (preserved, not modified) |
+| Tags | `v0.4.0-rc1` at `49c0cb0`, `v0.4.1` at HEAD |
 | EAS builds | `76a2ef96` (v0.4.0-rc1, preview) |
-| Next action | Timezone verification (Task G) → tag v0.4.1 → EAS build |
+| Next action | Push tag → EAS build → device validation (Task G) |
 
 ## Architecture
 
@@ -85,7 +85,7 @@ Three-layer architecture — domain never imports Expo:
 | v0.3-4 dashboard | Done | CycleDayRing, ProfileAvatar, quick-log |
 | v0.3-5 navigation | Done | Bottom tabs, nested stacks, Settings hub |
 | v0.4 notifications | Code complete | 3-layer architecture, 10 commits, 133 tests passing |
-| v0.4.1 timezone-sync | In progress | Local todayIso, foreground re-sync, concurrency guard |
+| v0.4.1 timezone-sync | Done | Local todayIso, foreground re-sync, concurrency guard. `TIMEZONE_CHANGED` broadcast intentionally deferred (ADR 0007). |
 
 ## ADRs
 

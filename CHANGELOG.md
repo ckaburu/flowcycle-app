@@ -1,14 +1,10 @@
 # Changelog
 
-## Unreleased (v0.4.1)
-- Fixed timezone bug: `todayIso` now uses local calendar date instead of UTC, aligning past-date filtering with the reconciliation layer's local-time fire dates.
-- Added foreground re-sync: `syncNotifications()` runs on every background→active AppState transition, catching timezone changes, midnight rollovers, and Doze alarm resets.
-- Added concurrency guard: module-level `syncInFlight` boolean drops overlapping sync calls.
-- Memoized `ExpoNotificationAdapter` instance in `App.tsx` (single allocation, shared across bootstrap and foreground sync).
-- DEV-only notification harness (5s / 30s test scheduling).
-- Cancel-all test utility.
-- Added ADR 0007: local timezone sync decisions.
-- Added timezone and foreground sync verification checklist (Task G).
+## v0.4.1 — Timezone-Aware Notification Sync (2026-02-20)
+- Fixed notification scheduling to use local calendar date for past-date filtering, preventing missed or premature reminders near midnight in non-UTC timezones.
+- Added foreground re-sync: notifications are re-reconciled on every app resume, catching timezone changes and midnight rollovers.
+- Added concurrency guard preventing redundant sync calls during rapid app transitions.
+- DEV-only notification test harness (5s / 30s scheduling, cancel-all utility).
 
 ## v0.4-meaningful-notifications
 - Added three-layer notification architecture: Domain → Reconciliation → Infrastructure.
