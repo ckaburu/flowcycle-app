@@ -3,7 +3,7 @@
 > Authoritative session-to-session snapshot. Read this before making changes.
 > Update after every milestone or significant change.
 
-**Last updated**: 2026-02-20 (v0.4 code complete, pending device validation)
+**Last updated**: 2026-02-20 (v0.4.1 timezone-aware sync)
 
 ---
 
@@ -11,13 +11,13 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.4.0 (`app.json`, `package.json`) |
+| Version | 0.4.0 (`app.json`, `package.json`) — v0.4.1 pending release |
 | Branch | `feature/encryption` (sole active branch) |
-| Uncommitted | 9 files: notification ID-format fix, version bump, verification docs, Settings version display |
-| Tests | 133 passed, 3 todo (Realm-specific manual), 0 failures |
+| Tests | 139 passed, 3 todo (Realm-specific manual), 0 failures |
 | Types | `tsc --noEmit` clean |
-| EAS builds | `a375aa22` (original), `d97e3446` (post ID-fix) — both `preview` profile, Android |
-| Next action | Commit uncommitted changes → Samsung physical validation → distribute APK |
+| Tag | `v0.4.0-rc1` at `49c0cb0` (preserved, not modified) |
+| EAS builds | `76a2ef96` (v0.4.0-rc1, preview) |
+| Next action | Timezone verification (Task G) → tag v0.4.1 → EAS build |
 
 ## Architecture
 
@@ -44,7 +44,24 @@ Three-layer architecture — domain never imports Expo:
 
 - ID format: `fc-remind-{profileId}-{fireDateIso}T{HH:mm}`
 - Tracked IDs persisted in AsyncStorage (`flowcycle.trackedNotificationIds`)
-- 6 sync trigger points: bootstrap, quick-log, add-cycle, toggle pref, days-before change, profile switch
+- 7 sync trigger points: bootstrap, foreground resume, quick-log, add-cycle, toggle pref, days-before change, profile switch
+- Concurrency guard: module-level `syncInFlight` boolean drops overlapping calls
+
+### Timezone Behavior (v0.4.1)
+
+| Aspect | Implementation |
+|---|---|
+| "Today" derivation | Local calendar date (`getFullYear/Month/Date`) in `syncNotifications.ts` |
+| Cycle arithmetic | UTC (`Date.UTC`, `getUTCFullYear/Month/Date`) in `cycleMath.ts` — unchanged |
+| Fire time | 9 AM local (`new Date(y, m, d, 9)`) in `reconcileNotifications.ts` — unchanged |
+| ID generation | Uses UTC-derived `fireDateIso` — timezone-independent, deterministic |
+| Foreground re-sync | `AppState.addEventListener("change")` in `App.tsx` triggers `syncNotifications()` on background→active transition |
+| Timezone change detection | Via foreground re-sync only — no `TIMEZONE_CHANGED` broadcast listener |
+
+**Known limitations:**
+- If the user changes timezone but never reopens the app, the previously scheduled alarm fires at 9 AM in the **old** timezone. The next app open corrects this.
+- No `TIME_SET` listener — manual system time changes are caught on next foreground.
+- Foreground sync is fire-and-forget; if it fails, the next user action triggers another sync.
 
 ### Encryption
 
@@ -68,6 +85,7 @@ Three-layer architecture — domain never imports Expo:
 | v0.3-4 dashboard | Done | CycleDayRing, ProfileAvatar, quick-log |
 | v0.3-5 navigation | Done | Bottom tabs, nested stacks, Settings hub |
 | v0.4 notifications | Code complete | 3-layer architecture, 10 commits, 133 tests passing |
+| v0.4.1 timezone-sync | In progress | Local todayIso, foreground re-sync, concurrency guard |
 
 ## ADRs
 
@@ -79,6 +97,7 @@ Three-layer architecture — domain never imports Expo:
 | 0004 | Onboarding Flow | State-machine wrapper, AsyncStorage flag, gate hierarchy |
 | 0005 | App Lock | SHA-256+salt PIN, exponential backoff, optional biometric |
 | 0006 | Notification Preferences | Realm storage, adapter pattern, deterministic IDs, 3-layer arch |
+| 0007 | Local Timezone Sync | Local todayIso, foreground re-sync, no broadcast receivers (yet) |
 
 ## Known Issues
 

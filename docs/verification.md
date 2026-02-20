@@ -535,3 +535,102 @@ adb logcat -s ReactNativeJS:V | grep -i notif
 | Tap 30s button | System notification appears in ~30 seconds with title "FlowCycle Test" |
 | Tap Cancel all | All scheduled alarms for the app are cleared |
 | Production build | Dev Tools section is not visible |
+
+---
+
+## Task G — Timezone and Foreground Sync Verification
+
+**Requires**: DEV build (`npx expo run:android`), emulator with ADB.
+**Context**: v0.4.1 added local-timezone `todayIso` and AppState foreground re-sync.
+
+### G1. Timezone Change Test (Africa/Nairobi → US/Pacific)
+
+```bash
+# Set timezone to Africa/Nairobi (UTC+3)
+adb shell service call alarm 3 s16 Africa/Nairobi
+
+# Launch app, enable notifications, log 3 cycle starts (~28 days apart)
+# Record the scheduled alarm time:
+adb shell dumpsys alarm | grep -A 5 "expo.modules.notifications"
+# Expected: alarm at 09:00 in EAT (East Africa Time)
+
+# Background the app
+adb shell input keyevent KEYCODE_HOME
+
+# Change timezone to US/Pacific (UTC-8)
+adb shell service call alarm 3 s16 America/Los_Angeles
+
+# Bring app to foreground
+adb shell am start -n com.ckaburu.flowcycleapp/.MainActivity
+```
+
+- [ ] `[NotifSync]` log line appears in logcat on foreground return
+- [ ] `adb shell dumpsys alarm` shows updated alarm time (09:00 in PST, not EAT)
+- [ ] Notification ID remains the same (deterministic — timezone does not affect ID)
+- [ ] No duplicate alarms scheduled
+
+### G2. Foreground Resync Test
+
+```bash
+# With notifications enabled and at least one scheduled alarm:
+adb shell dumpsys alarm | grep -c "expo.modules.notifications.NOTIFICATION_EVENT"
+# Record count (should be ≥1)
+
+# Background app
+adb shell input keyevent KEYCODE_HOME
+
+# Wait 5 seconds, then foreground
+sleep 5
+adb shell am start -n com.ckaburu.flowcycleapp/.MainActivity
+```
+
+- [ ] `[NotifSync] Foreground sync` log line appears in logcat
+- [ ] Alarm count unchanged (idempotent — same data produces empty diff)
+- [ ] No `cancel:` or `schedule:` log lines (nothing changed)
+
+### G3. No-Duplicate Alarm Test
+
+```bash
+# Rapid foreground/background cycling (5x)
+for i in 1 2 3 4 5; do
+  adb shell input keyevent KEYCODE_HOME
+  sleep 1
+  adb shell am start -n com.ckaburu.flowcycleapp/.MainActivity
+  sleep 2
+done
+
+# Count alarms
+adb shell dumpsys alarm | grep -c "expo.modules.notifications.NOTIFICATION_EVENT"
+```
+
+- [ ] Alarm count is exactly 1 (not 5) — concurrency guard + idempotent IDs prevent duplicates
+- [ ] No error lines in logcat
+
+### G4. Midnight Boundary Test
+
+```bash
+# Set system time to 11:55 PM local
+adb shell su -c "date $(date -d '+5 minutes' '+%m%d2355%Y')" 2>/dev/null
+# Or use Settings → System → Date & time → Set time manually
+
+# Enable notifications, log cycle starts, verify alarm scheduled
+adb shell dumpsys alarm | grep -A 3 "expo.modules.notifications"
+
+# Wait for midnight rollover (or advance clock past midnight)
+# Foreground the app
+
+adb shell am start -n com.ckaburu.flowcycleapp/.MainActivity
+```
+
+- [ ] Sync runs on foreground
+- [ ] `todayIso` reflects the new local date (post-midnight)
+- [ ] If the fire date was today (pre-midnight), it is now filtered as past
+- [ ] No crash or error at date boundary
+
+### G5. Reset Timezone After Testing
+
+```bash
+# Restore to original timezone
+adb shell service call alarm 3 s16 America/New_York
+# Or your actual timezone
+```
