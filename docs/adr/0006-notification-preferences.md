@@ -20,7 +20,7 @@ v0.4 adds per-profile notification preferences and cycle-aware scheduling. We ne
 - `MemoryNotificationAdapter` enables full-stack testing without mocks.
 - Three methods: `schedule(id, fireDate, title, body)`, `cancel(id)`, `cancelAll()`.
 
-**D3: Deterministic notification IDs (`fc-remind-{profileId}-{targetDateIso}`).**
+**D3: Deterministic notification IDs (`fc-remind-{profileId}-{fireDateIso}T{HH:mm}`).**
 - Eliminates need for key→ID mapping storage.
 - Guarantees idempotency via Expo's identifier-based replacement.
 - Same inputs → same IDs → no duplicates.

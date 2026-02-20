@@ -21,7 +21,7 @@ describe("buildNotificationPlan", () => {
 
     expect(items).toHaveLength(1);
     expect(items[0]).toEqual({
-      id: "fc-remind-1-2026-03-26",
+      id: "fc-remind-1-2026-03-24T09:00",
       profileId: 1,
       profileName: "Alice",
       targetDateIso: "2026-03-26",
@@ -105,22 +105,30 @@ describe("buildNotificationPlan", () => {
 
 describe("makeReminderId", () => {
   it("same inputs produce same ID (deterministic)", () => {
-    const id1 = makeReminderId(1, "2026-03-26");
-    const id2 = makeReminderId(1, "2026-03-26");
+    const id1 = makeReminderId(1, "2026-03-24");
+    const id2 = makeReminderId(1, "2026-03-24");
     expect(id1).toBe(id2);
-    expect(id1).toBe("fc-remind-1-2026-03-26");
+    expect(id1).toBe("fc-remind-1-2026-03-24T09:00");
   });
 
   it("different profileId produces different ID", () => {
-    const id1 = makeReminderId(1, "2026-03-26");
-    const id2 = makeReminderId(2, "2026-03-26");
+    const id1 = makeReminderId(1, "2026-03-24");
+    const id2 = makeReminderId(2, "2026-03-24");
     expect(id1).not.toBe(id2);
   });
 
-  it("different targetDate produces different ID", () => {
-    const id1 = makeReminderId(1, "2026-03-26");
-    const id2 = makeReminderId(1, "2026-04-23");
+  it("different fireDate produces different ID", () => {
+    const id1 = makeReminderId(1, "2026-03-24");
+    const id2 = makeReminderId(1, "2026-04-21");
     expect(id1).not.toBe(id2);
+  });
+
+  it("same profile + same date + different time → different ID", () => {
+    const id1 = makeReminderId(1, "2026-03-24", "09:00");
+    const id2 = makeReminderId(1, "2026-03-24", "18:00");
+    expect(id1).not.toBe(id2);
+    expect(id1).toBe("fc-remind-1-2026-03-24T09:00");
+    expect(id2).toBe("fc-remind-1-2026-03-24T18:00");
   });
 });
 
@@ -144,7 +152,7 @@ describe("computeNotificationPlan", () => {
     const plan = computeNotificationPlan([enabledProfile], [], todayIso, 1);
 
     expect(plan.toSchedule).toHaveLength(1);
-    expect(plan.toSchedule[0].id).toBe("fc-remind-1-2026-03-26");
+    expect(plan.toSchedule[0].id).toBe("fc-remind-1-2026-03-24T09:00");
     expect(plan.toCancel).toEqual([]);
   });
 
@@ -157,7 +165,7 @@ describe("computeNotificationPlan", () => {
   });
 
   it("unchanged item appears in neither toSchedule nor toCancel", () => {
-    const currentId = "fc-remind-1-2026-03-26"; // matches what buildNotificationPlan produces
+    const currentId = "fc-remind-1-2026-03-24T09:00"; // matches what buildNotificationPlan produces
     const plan = computeNotificationPlan([enabledProfile], [currentId], todayIso, 1);
 
     expect(plan.toSchedule).toEqual([]);
@@ -180,7 +188,7 @@ describe("computeNotificationPlan", () => {
       ...enabledProfile,
       enabled: false,
     };
-    const existingId = "fc-remind-1-2026-03-26";
+    const existingId = "fc-remind-1-2026-03-24T09:00";
     const plan = computeNotificationPlan([disabled], [existingId], todayIso, 1);
 
     expect(plan.toSchedule).toEqual([]);
@@ -205,8 +213,8 @@ describe("computeNotificationPlan", () => {
 
     expect(plan.toSchedule).toHaveLength(2);
     const ids = plan.toSchedule.map((item) => item.id);
-    expect(ids).toContain("fc-remind-1-2026-03-26");
-    expect(ids).toContain("fc-remind-2-2026-03-30");
+    expect(ids).toContain("fc-remind-1-2026-03-24T09:00");
+    expect(ids).toContain("fc-remind-2-2026-03-27T09:00");
     expect(plan.toCancel).toEqual([]);
   });
 

@@ -16,7 +16,7 @@ const NOW = new Date(2026, 1, 19, 9, 0, 0, 0).getTime();
 
 function makeItem(overrides: Partial<ReminderItem> = {}): ReminderItem {
   return {
-    id: "fc-remind-1-2026-03-26",
+    id: "fc-remind-1-2026-03-25T09:00",
     profileId: 1,
     profileName: "Alice",
     targetDateIso: "2026-03-26",
@@ -75,9 +75,9 @@ describe("reconcileScheduledNotifications", () => {
   });
 
   it("toSchedule only → adapter.schedule called for each item", async () => {
-    const item1 = makeItem({ id: "fc-remind-1-2026-03-26", fireDateIso: "2026-03-25" });
+    const item1 = makeItem({ id: "fc-remind-1-2026-03-25T09:00", fireDateIso: "2026-03-25" });
     const item2 = makeItem({
-      id: "fc-remind-1-2026-04-23",
+      id: "fc-remind-1-2026-04-22T09:00",
       fireDateIso: "2026-04-22",
       targetDateIso: "2026-04-23",
     });
@@ -86,8 +86,8 @@ describe("reconcileScheduledNotifications", () => {
     await reconcileScheduledNotifications(plan, adapter, undefined, NOW);
 
     expect(adapter.scheduled.size).toBe(2);
-    expect(adapter.scheduled.has("fc-remind-1-2026-03-26")).toBe(true);
-    expect(adapter.scheduled.has("fc-remind-1-2026-04-23")).toBe(true);
+    expect(adapter.scheduled.has("fc-remind-1-2026-03-25T09:00")).toBe(true);
+    expect(adapter.scheduled.has("fc-remind-1-2026-04-22T09:00")).toBe(true);
   });
 
   it("toCancel only → adapter.cancel called for each ID", async () => {
@@ -131,7 +131,7 @@ describe("reconcileScheduledNotifications", () => {
 
     // All cancels should appear before any schedules
     const cancelIdx = callOrder.indexOf("cancel:fc-remind-2-2026-02-20");
-    const scheduleIdx = callOrder.indexOf("schedule:fc-remind-1-2026-03-26");
+    const scheduleIdx = callOrder.indexOf("schedule:fc-remind-1-2026-03-25T09:00");
     expect(cancelIdx).toBeLessThan(scheduleIdx);
   });
 
@@ -139,7 +139,7 @@ describe("reconcileScheduledNotifications", () => {
     const logger = makeSyncLogger();
     // fireDateIso is 2026-02-18 → at 9am that is before NOW (2026-02-19 09:00)
     const pastItem = makeItem({
-      id: "fc-remind-1-2026-02-19",
+      id: "fc-remind-1-2026-02-18T09:00",
       fireDateIso: "2026-02-18",
       targetDateIso: "2026-02-19",
     });
@@ -150,14 +150,14 @@ describe("reconcileScheduledNotifications", () => {
     expect(adapter.scheduled.size).toBe(0);
     expect(logger.skips).toHaveLength(1);
     expect(logger.skips[0].reason).toBe("fire date in past");
-    expect(logger.skips[0].item.id).toBe("fc-remind-1-2026-02-19");
+    expect(logger.skips[0].item.id).toBe("fc-remind-1-2026-02-18T09:00");
   });
 
   it("fire date equals now exactly → item skipped (<=)", async () => {
     const logger = makeSyncLogger();
     // Create item whose fireDate at 9am local == NOW
     const nowItem = makeItem({
-      id: "fc-remind-1-2026-02-20",
+      id: "fc-remind-1-2026-02-19T09:00",
       fireDateIso: "2026-02-19",
       targetDateIso: "2026-02-20",
     });
@@ -182,9 +182,9 @@ describe("reconcileScheduledNotifications", () => {
       throwAdapter.scheduled.set(id, { fireDate, title, body });
     };
 
-    const item1 = makeItem({ id: "fc-remind-1-2026-03-26", fireDateIso: "2026-03-25" });
+    const item1 = makeItem({ id: "fc-remind-1-2026-03-25T09:00", fireDateIso: "2026-03-25" });
     const item2 = makeItem({
-      id: "fc-remind-1-2026-04-23",
+      id: "fc-remind-1-2026-04-22T09:00",
       fireDateIso: "2026-04-22",
       targetDateIso: "2026-04-23",
     });
@@ -194,9 +194,9 @@ describe("reconcileScheduledNotifications", () => {
 
     expect(logger.errors).toHaveLength(1);
     expect(logger.errors[0].action).toBe("schedule");
-    expect(logger.errors[0].id).toBe("fc-remind-1-2026-03-26");
+    expect(logger.errors[0].id).toBe("fc-remind-1-2026-03-25T09:00");
     // Second item was still scheduled
-    expect(throwAdapter.scheduled.has("fc-remind-1-2026-04-23")).toBe(true);
+    expect(throwAdapter.scheduled.has("fc-remind-1-2026-04-22T09:00")).toBe(true);
   });
 
   it("adapter.cancel throws → error logged, continues with next", async () => {
@@ -234,7 +234,7 @@ describe("reconcileScheduledNotifications", () => {
     await reconcileScheduledNotifications(plan, adapter, logger, NOW);
 
     expect(logger.schedules).toHaveLength(1);
-    expect(logger.schedules[0].id).toBe("fc-remind-1-2026-03-26");
+    expect(logger.schedules[0].id).toBe("fc-remind-1-2026-03-25T09:00");
     expect(logger.schedules[0].profileName).toBe("Alice");
   });
 

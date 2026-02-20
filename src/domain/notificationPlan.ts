@@ -10,7 +10,7 @@ import {
 // ────────────────────────────────────────────
 
 export type ReminderItem = {
-  /** Deterministic ID: `fc-remind-{profileId}-{targetDateIso}` */
+  /** Deterministic ID: `fc-remind-{profileId}-{fireDateIso}T{HH:mm}` */
   id: string;
   profileId: number;
   profileName: string;
@@ -47,9 +47,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function makeReminderId(
   profileId: number,
-  targetDateIso: string,
+  fireDateIso: string,
+  fireTimeHHmm: string = "09:00",
 ): string {
-  return `fc-remind-${profileId}-${targetDateIso}`;
+  return `fc-remind-${profileId}-${fireDateIso}T${fireTimeHHmm}`;
 }
 
 function subtractDays(iso: string, days: number): string {
@@ -94,7 +95,7 @@ export function buildNotificationPlan(
     // Only include if fire date is today or in the future
     if (fireDateIso >= todayIso) {
       items.push({
-        id: makeReminderId(profileId, targetDateIso),
+        id: makeReminderId(profileId, fireDateIso),
         profileId,
         profileName,
         targetDateIso,

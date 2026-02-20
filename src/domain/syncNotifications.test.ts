@@ -114,9 +114,9 @@ describe("syncNotifications", () => {
     await syncNotifications(memoryRepo, adapter);
 
     expect(adapter.scheduled.size).toBe(1);
-    expect(adapter.scheduled.has("fc-remind-1-2026-02-26")).toBe(true);
+    expect(adapter.scheduled.has("fc-remind-1-2026-02-25T09:00")).toBe(true);
 
-    const entry = adapter.scheduled.get("fc-remind-1-2026-02-26")!;
+    const entry = adapter.scheduled.get("fc-remind-1-2026-02-25T09:00")!;
     expect(entry.title).toBe("Period Reminder");
     expect(entry.body).toBe("Alice's period may start in 1 day(s)");
   });
@@ -146,7 +146,7 @@ describe("syncNotifications", () => {
     );
 
     await syncNotifications(memoryRepo, adapter);
-    expect(adapter.scheduled.has("fc-remind-1-2026-02-26")).toBe(true);
+    expect(adapter.scheduled.has("fc-remind-1-2026-02-25T09:00")).toBe(true);
 
     // Add a new cycle start → shifts prediction forward
     // Cycles now: [Jan 1, Jan 29, Feb 26] → typical=28, next=Mar 26, fire=Mar 25
@@ -155,8 +155,8 @@ describe("syncNotifications", () => {
 
     await syncNotifications(memoryRepo, adapter);
 
-    expect(adapter.cancelled).toContain("fc-remind-1-2026-02-26");
-    expect(adapter.scheduled.has("fc-remind-1-2026-03-26")).toBe(true);
+    expect(adapter.cancelled).toContain("fc-remind-1-2026-02-25T09:00");
+    expect(adapter.scheduled.has("fc-remind-1-2026-03-25T09:00")).toBe(true);
     expect(adapter.scheduled.size).toBe(1);
   });
 
@@ -178,7 +178,7 @@ describe("syncNotifications", () => {
     await syncNotifications(memoryRepo, adapter);
 
     expect(adapter.scheduled.size).toBe(0);
-    expect(adapter.cancelled).toContain("fc-remind-1-2026-02-26");
+    expect(adapter.cancelled).toContain("fc-remind-1-2026-02-25T09:00");
   });
 
   it("disable pref, re-sync → notification cancelled", async () => {
@@ -198,7 +198,7 @@ describe("syncNotifications", () => {
     await syncNotifications(memoryRepo, adapter);
 
     expect(adapter.scheduled.size).toBe(0);
-    expect(adapter.cancelled).toContain("fc-remind-1-2026-02-26");
+    expect(adapter.cancelled).toContain("fc-remind-1-2026-02-25T09:00");
   });
 
   it("two profiles, both enabled → two notifications", async () => {
@@ -210,8 +210,8 @@ describe("syncNotifications", () => {
     await syncNotifications(memoryRepo, adapter);
 
     expect(adapter.scheduled.size).toBe(2);
-    expect(adapter.scheduled.has("fc-remind-1-2026-02-26")).toBe(true);
-    expect(adapter.scheduled.has("fc-remind-2-2026-03-02")).toBe(true);
+    expect(adapter.scheduled.has("fc-remind-1-2026-02-25T09:00")).toBe(true);
+    expect(adapter.scheduled.has("fc-remind-2-2026-02-28T09:00")).toBe(true);
   });
 
   it("logger receives structured events", async () => {
@@ -221,7 +221,7 @@ describe("syncNotifications", () => {
     await syncNotifications(memoryRepo, adapter, logger);
 
     expect(logger.schedules).toHaveLength(1);
-    expect(logger.schedules[0].id).toBe("fc-remind-1-2026-02-26");
+    expect(logger.schedules[0].id).toBe("fc-remind-1-2026-02-25T09:00");
     expect(logger.schedules[0].profileName).toBe("Alice");
     expect(logger.cancels).toHaveLength(0);
     expect(logger.skips).toHaveLength(0);
@@ -236,7 +236,7 @@ describe("syncNotifications", () => {
     const stored = mockStore["flowcycle.trackedNotificationIds"];
     expect(stored).toBeDefined();
     const ids: unknown = JSON.parse(stored);
-    expect(ids).toEqual(["fc-remind-1-2026-02-26"]);
+    expect(ids).toEqual(["fc-remind-1-2026-02-25T09:00"]);
   });
 
   it("profile with insufficient cycle data → no notification", async () => {
