@@ -21,7 +21,7 @@ export type DashboardData = {
   typicalLength: number | null;
   lastStart: string | null;
   nextStartEstimate: string | null;
-  sortedStartDates: string[];
+  startDates: string[];
 };
 
 // ─── Loader ──────────────────────────────────────────────────────────
@@ -47,25 +47,23 @@ export async function loadDashboardData(
     throw new Error("Profile not found");
   }
 
-  // 2. Fetch and sort cycle starts ascending
+  // 2. Fetch cycle start dates
   const cycleStarts = await repo.listCycleStarts(profileId);
-  const sortedStartDates = cycleStarts
-    .map((cs) => cs.startDateIso)
-    .sort();
+  const startDates = cycleStarts.map((cs) => cs.startDateIso);
 
   // 3. Determine today
   const today = todayIso ?? formatIsoDate(new Date());
 
   // 4. Compute metrics
   const lastStart =
-    sortedStartDates.length > 0
-      ? sortedStartDates[sortedStartDates.length - 1]
+    startDates.length > 0
+      ? startDates.reduce((a, b) => (a > b ? a : b))
       : null;
 
   const cycleDay =
     lastStart !== null ? computeCycleDay(today, lastStart) : null;
 
-  const typLen = typicalCycleLength(sortedStartDates);
+  const typLen = typicalCycleLength(startDates);
 
   const nextStartEstimate =
     lastStart !== null && typLen !== null
@@ -79,6 +77,6 @@ export async function loadDashboardData(
     typicalLength: typLen,
     lastStart,
     nextStartEstimate,
-    sortedStartDates,
+    startDates,
   };
 }

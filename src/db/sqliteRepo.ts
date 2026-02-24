@@ -1,5 +1,6 @@
 import { SQLiteDatabase, openDatabaseAsync } from "expo-sqlite";
 
+import { assertNotFutureDate, DuplicateCycleStartError } from "../domain/errors";
 import { assertIsoDate } from "../utils/date";
 import { CycleStart, NotificationPreference, Profile, Repository } from "./repo";
 
@@ -128,6 +129,7 @@ class SQLiteRepo implements Repository {
   async addCycleStart(profileId: number, startDateIso: string): Promise<CycleStart> {
     await this.init();
     assertIsoDate(startDateIso);
+    assertNotFutureDate(startDateIso);
 
     const db = await this.getDb();
     const profile = await db.getFirstAsync<{ id: number }>(
@@ -137,6 +139,15 @@ class SQLiteRepo implements Repository {
 
     if (!profile) {
       throw new Error(`Profile not found: ${profileId}`);
+    }
+
+    const existing = await db.getFirstAsync<{ id: number }>(
+      "SELECT id FROM cycle_starts WHERE profile_id = ? AND start_date = ?;",
+      profileId,
+      startDateIso
+    );
+    if (existing) {
+      throw new DuplicateCycleStartError(startDateIso);
     }
 
     const createdAt = nowIsoTimestamp();
@@ -153,6 +164,50 @@ class SQLiteRepo implements Repository {
       startDateIso,
       createdAt,
     };
+  }
+
+  async updateCycleStart(id: number, newStartDateIso: string): Promise<CycleStart> {
+    await this.init();
+    assertIsoDate(newStartDateIso);
+    assertNotFutureDate(newStartDateIso);
+
+    const db = await this.getDb();
+    const entry = await db.getFirstAsync<CycleStartRow>(
+      "SELECT id, profile_id, start_date, created_at FROM cycle_starts WHERE id = ?;",
+      id
+    );
+    if (!entry) {
+      throw new Error(`CycleStart not found: ${id}`);
+    }
+
+    const duplicate = await db.getFirstAsync<{ id: number }>(
+      "SELECT id FROM cycle_starts WHERE profile_id = ? AND start_date = ? AND id != ?;",
+      entry.profile_id,
+      newStartDateIso,
+      id
+    );
+    if (duplicate) {
+      throw new DuplicateCycleStartError(newStartDateIso);
+    }
+
+    await db.runAsync(
+      "UPDATE cycle_starts SET start_date = ? WHERE id = ?;",
+      newStartDateIso,
+      id
+    );
+
+    return {
+      id: entry.id,
+      profileId: entry.profile_id,
+      startDateIso: newStartDateIso,
+      createdAt: entry.created_at,
+    };
+  }
+
+  async deleteCycleStart(id: number): Promise<void> {
+    await this.init();
+    const db = await this.getDb();
+    await db.runAsync("DELETE FROM cycle_starts WHERE id = ?;", id);
   }
 
   async listCycleStarts(profileId: number): Promise<CycleStart[]> {

@@ -108,8 +108,9 @@ describe("syncNotifications", () => {
   });
 
   it("sync with enabled pref + cycles → adapter has notification", async () => {
-    // Alice: cycles [Jan 1, Jan 29] → typical=28, next=Feb 26, fire=Feb 25
-    await seedProfile("Alice", ["2026-01-01", "2026-01-29"], true, 1);
+    // Alice: cycles [Dec 4, Jan 1, Jan 29] → intervals: 28, 28 → typical=28
+    // next=Feb 26, fire=Feb 25 (daysBefore=1)
+    await seedProfile("Alice", ["2025-12-04", "2026-01-01", "2026-01-29"], true, 1);
 
     await syncNotifications(memoryRepo, adapter);
 
@@ -122,7 +123,7 @@ describe("syncNotifications", () => {
   });
 
   it("sync twice, same data → idempotent (adapter unchanged)", async () => {
-    await seedProfile("Alice", ["2026-01-01", "2026-01-29"], true, 1);
+    await seedProfile("Alice", ["2025-12-04", "2026-01-01", "2026-01-29"], true, 1);
 
     await syncNotifications(memoryRepo, adapter);
     expect(adapter.scheduled.size).toBe(1);
@@ -140,7 +141,7 @@ describe("syncNotifications", () => {
   it("add cycle start, re-sync → old cancelled, new scheduled", async () => {
     const profileId = await seedProfile(
       "Alice",
-      ["2026-01-01", "2026-01-29"],
+      ["2025-12-04", "2026-01-01", "2026-01-29"],
       true,
       1,
     );
@@ -149,21 +150,22 @@ describe("syncNotifications", () => {
     expect(adapter.scheduled.has("fc-remind-1-2026-02-25T09:00")).toBe(true);
 
     // Add a new cycle start → shifts prediction forward
-    // Cycles now: [Jan 1, Jan 29, Feb 26] → typical=28, next=Mar 26, fire=Mar 25
-    await memoryRepo.addCycleStart(profileId, "2026-02-26");
+    // Cycles now: [Dec 4, Jan 1, Jan 29, Feb 19] → last 3 intervals: 28, 28, 21
+    // typical = median([28, 28, 21]) = 28, last = Feb 19, next = Mar 19, fire = Mar 18
+    await memoryRepo.addCycleStart(profileId, "2026-02-19");
     adapter.cancelled = [];
 
     await syncNotifications(memoryRepo, adapter);
 
     expect(adapter.cancelled).toContain("fc-remind-1-2026-02-25T09:00");
-    expect(adapter.scheduled.has("fc-remind-1-2026-03-25T09:00")).toBe(true);
+    expect(adapter.scheduled.has("fc-remind-1-2026-03-18T09:00")).toBe(true);
     expect(adapter.scheduled.size).toBe(1);
   });
 
   it("delete profile, re-sync → notification cancelled", async () => {
     const profileId = await seedProfile(
       "Alice",
-      ["2026-01-01", "2026-01-29"],
+      ["2025-12-04", "2026-01-01", "2026-01-29"],
       true,
       1,
     );
@@ -184,7 +186,7 @@ describe("syncNotifications", () => {
   it("disable pref, re-sync → notification cancelled", async () => {
     const profileId = await seedProfile(
       "Alice",
-      ["2026-01-01", "2026-01-29"],
+      ["2025-12-04", "2026-01-01", "2026-01-29"],
       true,
       1,
     );
@@ -202,10 +204,10 @@ describe("syncNotifications", () => {
   });
 
   it("two profiles, both enabled → two notifications", async () => {
-    // Alice: typical=28, next=Feb 26, fire=Feb 25
-    await seedProfile("Alice", ["2026-01-01", "2026-01-29"], true, 1);
-    // Bob: typical=28, next=Mar 2, fire=Feb 28 (daysBefore=2)
-    await seedProfile("Bob", ["2026-01-05", "2026-02-02"], true, 2);
+    // Alice: intervals 28, 28 → typical=28, next=Feb 26, fire=Feb 25
+    await seedProfile("Alice", ["2025-12-04", "2026-01-01", "2026-01-29"], true, 1);
+    // Bob: intervals 28, 28 → typical=28, next=Mar 2, fire=Feb 28 (daysBefore=2)
+    await seedProfile("Bob", ["2025-12-08", "2026-01-05", "2026-02-02"], true, 2);
 
     await syncNotifications(memoryRepo, adapter);
 
@@ -215,7 +217,7 @@ describe("syncNotifications", () => {
   });
 
   it("logger receives structured events", async () => {
-    await seedProfile("Alice", ["2026-01-01", "2026-01-29"], true, 1);
+    await seedProfile("Alice", ["2025-12-04", "2026-01-01", "2026-01-29"], true, 1);
     const logger = makeSyncLogger();
 
     await syncNotifications(memoryRepo, adapter, logger);
@@ -229,7 +231,7 @@ describe("syncNotifications", () => {
   });
 
   it("tracked IDs persisted to AsyncStorage", async () => {
-    await seedProfile("Alice", ["2026-01-01", "2026-01-29"], true, 1);
+    await seedProfile("Alice", ["2025-12-04", "2026-01-01", "2026-01-29"], true, 1);
 
     await syncNotifications(memoryRepo, adapter);
 

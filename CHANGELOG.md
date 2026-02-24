@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.4.2 — Data Integrity & Cycle Editing (2026-02-24)
+- Added edit and delete cycle start entries in CycleLogScreen with inline editing and confirmation dialog.
+- Added repository-layer uniqueness enforcement: `(profileId, startDateIso)` duplicate check on add and update, throwing `DuplicateCycleStartError`.
+- Added future-date rejection: `assertNotFutureDate()` on add and update, throwing `FutureDateError`.
+- Added `updateCycleStart(id, newDateIso)` and `deleteCycleStart(id)` to Repository interface with implementations in Realm, Memory, and SQLite repos.
+- Internalized date sorting: `computeCycleLengths()` is now the sole sort point in the computation pipeline. Callers no longer need to pre-sort.
+- Raised prediction threshold: `typicalCycleLength()` requires >= 2 intervals (3 cycle starts) before returning non-null, improving statistical reliability.
+- Wired `syncNotifications()` fire-and-forget after all 3 mutation paths (add, edit, delete).
+- Added typed domain errors (`DuplicateCycleStartError`, `FutureDateError`) with `ErrorBanner` display in CycleLogScreen.
+- Added ADR 0008: cycle mutation semantics (8 decisions: D1-D8).
+- Added 27 new tests (166 total passing).
+
 ## v0.4.1 — Timezone-Aware Notification Sync (2026-02-20)
 - Fixed notification scheduling to use local calendar date for past-date filtering, preventing missed or premature reminders near midnight in non-UTC timezones.
 - Added foreground re-sync: notifications are re-reconciled on every app resume, catching timezone changes and midnight rollovers.

@@ -23,6 +23,8 @@ export interface Repository {
   listProfiles(): Promise<Profile[]>;
   deleteProfile(id: number): Promise<void>;
   addCycleStart(profileId: number, startDateIso: string): Promise<CycleStart>;
+  updateCycleStart(id: number, newStartDateIso: string): Promise<CycleStart>;
+  deleteCycleStart(id: number): Promise<void>;
   listCycleStarts(profileId: number): Promise<CycleStart[]>;
   getNotificationPreference(profileId: number): Promise<NotificationPreference | null>;
   setNotificationPreference(profileId: number, enabled: boolean, daysBefore: number): Promise<NotificationPreference>;

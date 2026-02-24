@@ -25,7 +25,7 @@ describe("schema migration — automated (MemoryRepo proxy)", () => {
     const profile = await memoryRepo.createProfile("MigrationTest");
     const cycleStart = await memoryRepo.addCycleStart(
       profile.id,
-      "2026-03-01",
+      "2026-01-15",
     );
     const pref = await memoryRepo.setNotificationPreference(
       profile.id,
@@ -79,7 +79,7 @@ describe("schema migration — automated (MemoryRepo proxy)", () => {
 
   it("cascade delete removes NotificationPreference with profile", async () => {
     const profile = await memoryRepo.createProfile("CascadeTest");
-    await memoryRepo.addCycleStart(profile.id, "2026-03-10");
+    await memoryRepo.addCycleStart(profile.id, "2026-01-10");
     await memoryRepo.setNotificationPreference(profile.id, true, 2);
 
     await memoryRepo.deleteProfile(profile.id);

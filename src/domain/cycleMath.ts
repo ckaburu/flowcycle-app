@@ -30,12 +30,13 @@ export function computeCycleDay(todayIso: string, lastStartIso: string): number 
   return Math.max(1, daysBetween(lastStart, today) + 1);
 }
 
-export function computeCycleLengths(sortedStartDatesIsoAsc: string[]): number[] {
+export function computeCycleLengths(startDatesIso: string[]): number[] {
+  const sorted = [...startDatesIso].sort();
   const lengths: number[] = [];
 
-  for (let index = 1; index < sortedStartDatesIsoAsc.length; index += 1) {
-    const previous = parseIsoDate(sortedStartDatesIsoAsc[index - 1]);
-    const current = parseIsoDate(sortedStartDatesIsoAsc[index]);
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = parseIsoDate(sorted[index - 1]);
+    const current = parseIsoDate(sorted[index]);
     const diff = daysBetween(previous, current);
     if (diff > 0) {
       lengths.push(diff);
@@ -60,13 +61,13 @@ export function median(nums: number[]): number {
   return (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
-export function typicalCycleLength(startDatesIsoAsc: string[], maxN = 3): number | null {
+export function typicalCycleLength(startDatesIso: string[], maxN = 3): number | null {
   if (maxN <= 0) {
     return null;
   }
 
-  const lengths = computeCycleLengths(startDatesIsoAsc);
-  if (lengths.length === 0) {
+  const lengths = computeCycleLengths(startDatesIso);
+  if (lengths.length < 2) {
     return null;
   }
 

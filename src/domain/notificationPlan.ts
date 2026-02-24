@@ -36,7 +36,7 @@ export type ProfileNotificationInput = {
   profileName: string;
   enabled: boolean;
   daysBefore: number;
-  cycleStartDatesAsc: string[];
+  cycleStartDates: string[];
 };
 
 // ────────────────────────────────────────────
@@ -76,17 +76,17 @@ export function buildNotificationPlan(
   profileId: number,
   profileName: string,
   daysBefore: number,
-  cycleStartDatesAsc: string[],
+  cycleStartDates: string[],
   todayIso: string,
   maxReminders: number,
 ): ReminderItem[] {
-  const typLen = typicalCycleLength(cycleStartDatesAsc);
+  const typLen = typicalCycleLength(cycleStartDates);
   if (typLen === null) {
     return [];
   }
 
   const items: ReminderItem[] = [];
-  let lastStartIso = cycleStartDatesAsc[cycleStartDatesAsc.length - 1];
+  let lastStartIso = cycleStartDates.reduce((a, b) => (a > b ? a : b));
 
   for (let i = 0; i < maxReminders; i++) {
     const targetDateIso = estimateNextStart(lastStartIso, typLen);
@@ -139,7 +139,7 @@ export function computeNotificationPlan(
       profile.profileId,
       profile.profileName,
       profile.daysBefore,
-      profile.cycleStartDatesAsc,
+      profile.cycleStartDates,
       todayIso,
       maxRemindersPerProfile,
     );

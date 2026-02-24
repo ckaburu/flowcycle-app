@@ -72,12 +72,12 @@ describe("quickLogCycleStart", () => {
 
     const aliceResult = await quickLogCycleStart(
       alice.id,
-      "2026-03-01",
+      "2026-02-01",
       memoryRepo,
     );
     const bobResult = await quickLogCycleStart(
       bob.id,
-      "2026-03-01",
+      "2026-02-01",
       memoryRepo,
     );
 

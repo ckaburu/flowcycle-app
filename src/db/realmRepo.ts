@@ -2,6 +2,7 @@ import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import Realm from "realm";
 
+import { assertNotFutureDate, DuplicateCycleStartError } from "../domain/errors";
 import { assertIsoDate } from "../utils/date";
 import { CycleStart, NotificationPreference, Profile, Repository } from "./repo";
 
@@ -234,11 +235,19 @@ class RealmRepo implements Repository {
   async addCycleStart(profileId: number, startDateIso: string): Promise<CycleStart> {
     await this.init();
     assertIsoDate(startDateIso);
+    assertNotFutureDate(startDateIso);
 
     const realm = this.getRealmOrThrow();
     const profile = realm.objectForPrimaryKey<ProfileRecord>(PROFILE_SCHEMA_NAME, profileId);
     if (!profile) {
       throw new Error(`Profile not found: ${profileId}`);
+    }
+
+    const existing = realm
+      .objects<CycleStartRecord>(CYCLE_START_SCHEMA_NAME)
+      .filtered("profileId == $0 AND startDateIso == $1", profileId, startDateIso);
+    if (existing.length > 0) {
+      throw new DuplicateCycleStartError(startDateIso);
     }
 
     const cycleStart: CycleStart = {
@@ -253,6 +262,48 @@ class RealmRepo implements Repository {
     });
 
     return cycleStart;
+  }
+
+  async updateCycleStart(id: number, newStartDateIso: string): Promise<CycleStart> {
+    await this.init();
+    assertIsoDate(newStartDateIso);
+    assertNotFutureDate(newStartDateIso);
+
+    const realm = this.getRealmOrThrow();
+    const entry = realm.objectForPrimaryKey<CycleStartRecord>(CYCLE_START_SCHEMA_NAME, id);
+    if (!entry) {
+      throw new Error(`CycleStart not found: ${id}`);
+    }
+
+    const duplicate = realm
+      .objects<CycleStartRecord>(CYCLE_START_SCHEMA_NAME)
+      .filtered("profileId == $0 AND startDateIso == $1 AND id != $2", entry.profileId, newStartDateIso, id);
+    if (duplicate.length > 0) {
+      throw new DuplicateCycleStartError(newStartDateIso);
+    }
+
+    realm.write(() => {
+      entry.startDateIso = newStartDateIso;
+    });
+
+    return {
+      id: entry.id,
+      profileId: entry.profileId,
+      startDateIso: entry.startDateIso,
+      createdAt: entry.createdAt,
+    };
+  }
+
+  async deleteCycleStart(id: number): Promise<void> {
+    await this.init();
+    const realm = this.getRealmOrThrow();
+
+    realm.write(() => {
+      const entry = realm.objectForPrimaryKey<CycleStartRecord>(CYCLE_START_SCHEMA_NAME, id);
+      if (entry) {
+        realm.delete(entry);
+      }
+    });
   }
 
   async listCycleStarts(profileId: number): Promise<CycleStart[]> {

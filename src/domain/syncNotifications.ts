@@ -80,7 +80,7 @@ export async function syncNotifications(
           profileName: profile.name,
           enabled: pref.enabled,
           daysBefore: pref.daysBefore,
-          cycleStartDatesAsc: cycles.map((c) => c.startDateIso).sort(),
+          cycleStartDates: cycles.map((c) => c.startDateIso),
         } satisfies ProfileNotificationInput;
       }),
     );

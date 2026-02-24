@@ -64,18 +64,25 @@ describe("buildNotificationPlan", () => {
     expect(items).toEqual([]);
   });
 
+  it("2 cycle starts (1 interval, below minimum) → returns empty array", () => {
+    const twoCycles = ["2025-10-01", "2025-10-29"];
+    const items = buildNotificationPlan(1, "Alice", daysBefore, twoCycles, todayIso, 1);
+    expect(items).toEqual([]);
+  });
+
   it("fire date in the past → item excluded", () => {
-    // Cycle data from far in the past: typical=28, next=2025-11-26, fire=2025-11-24
-    const oldCycles = ["2025-10-01", "2025-10-29"];
+    // 3 cycle starts from far in the past: intervals = 28, 28 → typical = 28
+    // last = 2025-10-29, next = 2025-11-26, fire = 2025-11-24 (past)
+    const oldCycles = ["2025-09-03", "2025-10-01", "2025-10-29"];
     const items = buildNotificationPlan(1, "Alice", daysBefore, oldCycles, todayIso, 1);
     expect(items).toEqual([]);
   });
 
   it("fire date exactly today → item included", () => {
-    // Construct cycle data so fire date lands on todayIso
     // today = 2026-02-19, daysBefore = 2, target must be 2026-02-21
     // typical = 28, lastStart must be 2026-01-24 (2026-01-24 + 28 = 2026-02-21)
-    const cycles = ["2025-12-27", "2026-01-24"];
+    // 3 starts with intervals of 28: 2025-11-29 → 2025-12-27 → 2026-01-24
+    const cycles = ["2025-11-29", "2025-12-27", "2026-01-24"];
     const items = buildNotificationPlan(1, "Alice", daysBefore, cycles, todayIso, 1);
     expect(items).toHaveLength(1);
     expect(items[0].fireDateIso).toBe("2026-02-19");
@@ -91,7 +98,8 @@ describe("buildNotificationPlan", () => {
   it("timezone-shift: ISO date math uses UTC — no DST drift", () => {
     // Cycle straddles DST boundary (March clocks change in many timezones)
     // Domain uses UTC-only math, so no drift should occur
-    const dstCycles = ["2026-02-08", "2026-03-08"];
+    // 3 starts with intervals of 28: 2026-01-11 → 2026-02-08 → 2026-03-08
+    const dstCycles = ["2026-01-11", "2026-02-08", "2026-03-08"];
     // typical = 28, next = 2026-04-05, fire = 2026-04-03
     const items = buildNotificationPlan(1, "Alice", 2, dstCycles, "2026-03-10", 1);
 
@@ -147,7 +155,7 @@ describe("computeNotificationPlan", () => {
     profileName: "Alice",
     enabled: true,
     daysBefore: 2,
-    cycleStartDatesAsc: threeCycles,
+    cycleStartDates: threeCycles,
   };
 
   it("new item appears in toSchedule", () => {
@@ -203,7 +211,7 @@ describe("computeNotificationPlan", () => {
       profileName: "Luna",
       enabled: true,
       daysBefore: 3,
-      cycleStartDatesAsc: ["2026-01-05", "2026-02-02", "2026-03-02"],
+      cycleStartDates: ["2026-01-05", "2026-02-02", "2026-03-02"],
     };
 
     const plan = computeNotificationPlan(

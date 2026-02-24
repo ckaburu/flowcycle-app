@@ -3,7 +3,7 @@
 > Authoritative session-to-session snapshot. Read this before making changes.
 > Update after every milestone or significant change.
 
-**Last updated**: 2026-02-20 (v0.4.1 timezone-aware sync)
+**Last updated**: 2026-02-24 (Milestone 2 — Data Integrity & Cycle Editing COMPLETE)
 
 ---
 
@@ -11,13 +11,14 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.4.1 (stable) |
+| Version | 0.4.2 (stable) |
 | Branch | `feature/encryption` (sole active branch) |
-| Tests | 139 passed, 3 todo (Realm-specific manual), 0 failures |
+| Tests | 166 passed, 3 todo (Realm-specific manual), 0 failures |
 | Types | `tsc --noEmit` clean |
-| Tags | `v0.4.0-rc1` at `49c0cb0`, `v0.4.1` at HEAD |
+| Tags | `v0.4.0-rc1` at `49c0cb0`, `v0.4.1` at `73e872a`, `v0.4.2` at HEAD |
 | EAS builds | `76a2ef96` (v0.4.0-rc1, preview) |
-| Next action | Push tag → EAS build → device validation (Task G) |
+| Milestone 2 | COMPLETE — Data Integrity & Cycle Editing |
+| Next action | Milestone 3 planning |
 
 ## Architecture
 
@@ -44,7 +45,7 @@ Three-layer architecture — domain never imports Expo:
 
 - ID format: `fc-remind-{profileId}-{fireDateIso}T{HH:mm}`
 - Tracked IDs persisted in AsyncStorage (`flowcycle.trackedNotificationIds`)
-- 7 sync trigger points: bootstrap, foreground resume, quick-log, add-cycle, toggle pref, days-before change, profile switch
+- 9 sync trigger points: bootstrap, foreground resume, quick-log, add-cycle, edit-cycle, delete-cycle, toggle pref, days-before change, profile switch
 - Concurrency guard: module-level `syncInFlight` boolean drops overlapping calls
 
 ### Timezone Behavior (v0.4.1)
@@ -58,10 +59,48 @@ Three-layer architecture — domain never imports Expo:
 | Foreground re-sync | `AppState.addEventListener("change")` in `App.tsx` triggers `syncNotifications()` on background→active transition |
 | Timezone change detection | Via foreground re-sync only — no `TIMEZONE_CHANGED` broadcast listener |
 
+### Reliability Guarantees (Milestone 1)
+
+| Guarantee | Mechanism |
+|---|---|
+| Reboot persistence | Expo's `BOOT_COMPLETED` receiver re-schedules from `SharedPreferences` — no app open required |
+| Battery/Doze | `setExactAndAllowWhileIdle` (Doze-piercing); fallback to `setAndAllowWhileIdle` on API 31+ without exact alarm permission |
+| Timezone changes | Foreground re-sync on `AppState` background→active transition; local `todayIso` derivation |
+| Concurrency | `syncInFlight` boolean drops overlapping async calls |
+| Idempotency | Deterministic IDs + set-diff reconciliation; duplicate calls produce empty plans |
+| Force-stop recovery | Bootstrap sync on next app open re-schedules from Realm data |
+| App update | Expo's `MY_PACKAGE_REPLACED` receiver re-schedules all alarms |
+
 **Known limitations:**
 - If the user changes timezone but never reopens the app, the previously scheduled alarm fires at 9 AM in the **old** timezone. The next app open corrects this.
 - No `TIME_SET` listener — manual system time changes are caught on next foreground.
 - Foreground sync is fire-and-forget; if it fails, the next user action triggers another sync.
+
+### Data Integrity (Milestone 2 — v0.4.2)
+
+Repository-layer invariants enforced on all 3 implementations (Realm, Memory, SQLite):
+
+| Invariant | Mechanism |
+|---|---|
+| Uniqueness | `(profileId, startDateIso)` duplicate check on `addCycleStart()` and `updateCycleStart()` — throws `DuplicateCycleStartError` |
+| Future-date rejection | `assertNotFutureDate()` on `addCycleStart()` and `updateCycleStart()` — throws `FutureDateError` |
+| Canonical sort | `computeCycleLengths()` is the sole sort point in the computation pipeline — `[...dates].sort()` at entry |
+| Prediction threshold | `typicalCycleLength()` requires >= 2 intervals (3 cycle starts) before returning non-null |
+| Mutation → sync | Every cycle mutation (add, edit, delete) triggers `syncNotifications()` fire-and-forget |
+
+Mutation operations:
+
+| Operation | Method | Validation |
+|---|---|---|
+| Add | `addCycleStart(profileId, dateIso)` | ISO format, not future, not duplicate |
+| Edit | `updateCycleStart(id, newDateIso)` | ISO format, not future, not duplicate (excluding self) |
+| Delete | `deleteCycleStart(id)` | Idempotent (no-op if not found) |
+
+UI wiring (CycleLogScreen):
+- Edit: inline `AppInput` with Save/Cancel actions
+- Delete: `Alert.alert` confirmation dialog with destructive action
+- Error display: `ErrorBanner` with typed domain error messages (`DuplicateCycleStartError`, `FutureDateError`)
+- Post-mutation: shared `fireAndForgetSync()` helper triggers notification reconciliation
 
 ### Encryption
 
@@ -84,8 +123,11 @@ Three-layer architecture — domain never imports Expo:
 | v0.3-3 onboarding | Done | 4-step flow, crash-recovery, AsyncStorage flag |
 | v0.3-4 dashboard | Done | CycleDayRing, ProfileAvatar, quick-log |
 | v0.3-5 navigation | Done | Bottom tabs, nested stacks, Settings hub |
-| v0.4 notifications | Code complete | 3-layer architecture, 10 commits, 133 tests passing |
+| v0.4 notifications | Done | 3-layer architecture, 10 commits, 139 tests passing |
 | v0.4.1 timezone-sync | Done | Local todayIso, foreground re-sync, concurrency guard. `TIMEZONE_CHANGED` broadcast intentionally deferred (ADR 0007). |
+| **Milestone 1** | **COMPLETE** | **Notification Reliability — v0.4 + v0.4.1. All reliability guarantees verified.** |
+| v0.4.2 data-integrity | Done | Repo-layer uniqueness + future-date enforcement, edit/delete cycle starts, canonical sort, prediction threshold, 166 tests |
+| **Milestone 2** | **COMPLETE** | **Data Integrity & Cycle Editing — v0.4.2. All mutation invariants enforced across 3 repo implementations.** |
 
 ## ADRs
 
@@ -98,17 +140,18 @@ Three-layer architecture — domain never imports Expo:
 | 0005 | App Lock | SHA-256+salt PIN, exponential backoff, optional biometric |
 | 0006 | Notification Preferences | Realm storage, adapter pattern, deterministic IDs, 3-layer arch |
 | 0007 | Local Timezone Sync | Local todayIso, foreground re-sync, no broadcast receivers (yet) |
+| 0008 | Cycle Mutation Semantics | Repo-layer uniqueness (D1), typed domain errors (D2-D3), idempotent delete (D4), canonical sort ownership (D6), prediction threshold >= 2 intervals (D7), future-date rejection (D8) |
 
 ## Known Issues
 
 | Issue | Detail |
 |---|---|
-| No delete-cycle-start UI | Can add but not remove entries |
 | No delete-profile UI | `deleteProfile()` exists on repo interface, called only in tests; needs `syncNotifications` wiring when UI added |
 | 3 manual-only Realm migration tests | JSI unavailable in Jest; `it.todo()` in `realmRepo.migration.test.ts` |
 | `expo-sqlite` still in plugins | Loaded but not active (`app.json:31`) |
 | Doc bug in verification.md | Encryption checklist step 3 references `flowcycle_realm_key` but code uses `realm_encryption_key_v1` |
 | Root `PROJECT_STATE.md` stale | Gitignored local file from Roo era; superseded by this file |
+| No date picker | CycleLogScreen uses text input (YYYY-MM-DD) — date picker deferred to future UX milestone |
 
 ## Tech Stack
 

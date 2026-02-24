@@ -538,6 +538,71 @@ adb logcat -s ReactNativeJS:V | grep -i notif
 
 ---
 
+## Reboot Persistence Analysis
+
+**Result**: Notifications **survive device reboot**. No additional code required.
+
+### How It Works
+
+Expo-notifications (v0.6.x bundled with SDK 54) handles reboot persistence natively:
+
+1. **Persistent store**: When `scheduleNotificationAsync()` is called, `ExpoSchedulingDelegate` saves the full `NotificationRequest` to `SharedPreferences` (`expo.modules.notifications.SharedPreferencesNotificationsStore`) before creating the `AlarmManager` alarm.
+
+2. **Boot receiver**: `NotificationsService` (a `BroadcastReceiver`) is registered in the library's `AndroidManifest.xml` for:
+   - `android.intent.action.BOOT_COMPLETED`
+   - `android.intent.action.REBOOT`
+   - `android.intent.action.QUICKBOOT_POWERON` (HTC/vendor variants)
+   - `android.intent.action.MY_PACKAGE_REPLACED` (app updates)
+
+3. **Re-scheduling on boot**: `setupScheduledNotifications()` iterates over all persisted requests and re-creates `AlarmManager` alarms with their original trigger times.
+
+### Implications for FlowCycle
+
+| Scenario | Behavior |
+|---|---|
+| Device reboot | Expo re-schedules all alarms from SharedPreferences on `BOOT_COMPLETED`. No app open required. |
+| App update | Same re-scheduling via `MY_PACKAGE_REPLACED`. |
+| Force-stop | AlarmManager alarms are cleared. App must be opened for bootstrap sync to re-schedule. |
+| Clear app data | SharedPreferences wiped — alarms lost. App must be opened for bootstrap sync to re-create from Realm data. |
+
+**No new broadcast receivers needed.** Expo's built-in `BOOT_COMPLETED` handler covers the reboot case. Our foreground re-sync in `App.tsx` covers force-stop and clear-data recovery on next app open.
+
+---
+
+## Battery Optimization Analysis
+
+### Alarm Scheduling Strategy
+
+`ExpoSchedulingDelegate.setupAlarm()` uses a two-tier strategy:
+
+| Condition | API Used | Behavior |
+|---|---|---|
+| API < 31 OR `canScheduleExactAlarms() == true` | `AlarmManagerCompat.setExactAndAllowWhileIdle()` | Exact time, fires during Doze |
+| API ≥ 31 AND `canScheduleExactAlarms() == false` | `AlarmManagerCompat.setAndAllowWhileIdle()` | Inexact, fires during Doze with possible deferral |
+
+Both use `AlarmManager.RTC_WAKEUP` — device wakes from sleep to deliver.
+
+### Battery Mode Impact
+
+| Battery Mode | Effect on FlowCycle Notifications |
+|---|---|
+| **Default (Optimized)** | Alarms fire reliably. `setExactAndAllowWhileIdle` is designed to pierce Doze mode. Android may batch alarms in deep Doze (deferral up to ~10 minutes on some OEMs), but for a 9 AM daily reminder this is negligible. |
+| **Unrestricted** | Highest reliability. No Doze restrictions applied. Alarms fire at exact scheduled time. |
+| **Restricted** (user-selected or OEM aggressive) | App may be prevented from running background work. `BOOT_COMPLETED` receiver may not fire on some OEM skins (Xiaomi MIUI, Samsung OneUI, Huawei EMUI). User must whitelist app manually. |
+
+### Exact Alarm Permission (Android 12+)
+
+Starting API 31 (Android 12), `SCHEDULE_EXACT_ALARM` permission is required for exact alarms. Expo SDK 54 declares this in the merged manifest. If the user revokes it via Settings → Apps → Special access → Alarms & reminders, the fallback to `setAndAllowWhileIdle` provides slightly less precise but still Doze-aware delivery.
+
+### Recommendations for Users
+
+For best reliability:
+- Keep FlowCycle in **Default** or **Unrestricted** battery mode
+- Do not add to "sleeping apps" list (Samsung) or equivalent OEM restrictions
+- If notifications stop working, open the app once — bootstrap sync will re-schedule all alarms
+
+---
+
 ## Task G — Timezone and Foreground Sync Verification
 
 **Requires**: DEV build (`npx expo run:android`), emulator with ADB.

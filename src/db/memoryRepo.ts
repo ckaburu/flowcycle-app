@@ -1,3 +1,4 @@
+import { assertNotFutureDate, DuplicateCycleStartError } from "../domain/errors";
 import { assertIsoDate } from "../utils/date";
 import { CycleStart, NotificationPreference, Profile, Repository } from "./repo";
 
@@ -41,10 +42,18 @@ class MemoryRepo implements Repository {
 
   async addCycleStart(profileId: number, startDateIso: string): Promise<CycleStart> {
     assertIsoDate(startDateIso);
+    assertNotFutureDate(startDateIso);
 
     const profileExists = this.profiles.some((profile) => profile.id === profileId);
     if (!profileExists) {
       throw new Error(`Profile not found: ${profileId}`);
+    }
+
+    const duplicate = this.cycleStarts.some(
+      (entry) => entry.profileId === profileId && entry.startDateIso === startDateIso,
+    );
+    if (duplicate) {
+      throw new DuplicateCycleStartError(startDateIso);
     }
 
     const cycleStart: CycleStart = {
@@ -56,6 +65,30 @@ class MemoryRepo implements Repository {
 
     this.cycleStarts.push(cycleStart);
     return cycleStart;
+  }
+
+  async updateCycleStart(id: number, newStartDateIso: string): Promise<CycleStart> {
+    assertIsoDate(newStartDateIso);
+    assertNotFutureDate(newStartDateIso);
+
+    const entry = this.cycleStarts.find((e) => e.id === id);
+    if (!entry) {
+      throw new Error(`CycleStart not found: ${id}`);
+    }
+
+    const duplicate = this.cycleStarts.some(
+      (e) => e.id !== id && e.profileId === entry.profileId && e.startDateIso === newStartDateIso,
+    );
+    if (duplicate) {
+      throw new DuplicateCycleStartError(newStartDateIso);
+    }
+
+    entry.startDateIso = newStartDateIso;
+    return { ...entry };
+  }
+
+  async deleteCycleStart(id: number): Promise<void> {
+    this.cycleStarts = this.cycleStarts.filter((entry) => entry.id !== id);
   }
 
   async listCycleStarts(profileId: number): Promise<CycleStart[]> {
