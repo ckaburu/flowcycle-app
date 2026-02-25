@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, ViewStyle } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, ViewStyle } from "react-native";
 
 import { AppText } from "./AppText";
 import { colors, radii, spacing, typography } from "./tokens";
@@ -57,6 +57,9 @@ export function AppButton({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      android_ripple={
+        Platform.OS === "android" ? { color: vs.bgPressed } : undefined
+      }
       style={({ pressed }) => [
         styles.base,
         {

@@ -195,8 +195,6 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
   headerDate: {
@@ -209,7 +207,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   infoCard: {
-    marginHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
   dataRow: {
@@ -221,11 +218,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   emptyHint: {
-    marginHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
   logButton: {
-    marginHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
 });
