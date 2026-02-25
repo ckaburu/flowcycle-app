@@ -18,7 +18,9 @@ import {
   EmptyState,
   ErrorBanner,
   LoadingIndicator,
+  ProfileAvatar,
   ScreenContainer,
+  colors,
   spacing,
 } from "../ui";
 import { AVATAR_PALETTE, avatarColorIndex } from "../ui/avatarColor";
@@ -31,6 +33,7 @@ const repository = getRepository();
 export function ProfilesScreen({ navigation }: Props): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [cycleCounts, setCycleCounts] = useState<Map<number, number>>(new Map());
   const [activeProfileId, setActiveProfileId] = useState<number | null>(null);
   const [newProfileName, setNewProfileName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +47,15 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
         repository.listProfiles(),
         loadActiveProfileId(),
       ]);
+
+      const startsPerProfile = await Promise.all(
+        nextProfiles.map((p) => repository.listCycleStarts(p.id)),
+      );
+      const counts = new Map<number, number>();
+      nextProfiles.forEach((p, i) => counts.set(p.id, startsPerProfile[i].length));
+
       setProfiles(nextProfiles);
+      setCycleCounts(counts);
       setActiveProfileId(currentActiveId);
     } catch {
       setError("Failed to load profiles.");
@@ -107,45 +118,6 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
       ) : null}
 
-      {isLoading ? <LoadingIndicator /> : null}
-
-      {!isLoading && profiles.length === 0 ? (
-        <EmptyState
-          message="No profiles yet."
-          hint="Create one below to start tracking."
-        />
-      ) : null}
-
-      {profiles.map((profile) => {
-        const accent = AVATAR_PALETTE[avatarColorIndex(profile.name)];
-        return (
-          <Pressable
-            key={profile.id}
-            onPress={() => {
-              void onSelectProfile(profile.id);
-            }}
-            accessibilityRole="button"
-          >
-            <AppCard
-              style={[
-                styles.profileCard,
-                { borderLeftWidth: 2, borderLeftColor: accent },
-              ]}
-            >
-              <View style={styles.profileNameRow}>
-                <AppText variant="subheading">{profile.name}</AppText>
-                {activeProfileId === profile.id && (
-                  <View
-                    style={[styles.activeDot, { backgroundColor: accent }]}
-                  />
-                )}
-              </View>
-              <AppText variant="caption">ID: {profile.id}</AppText>
-            </AppCard>
-          </Pressable>
-        );
-      })}
-
       <View style={styles.inputRow}>
         <AppInput
           label="New profile"
@@ -163,19 +135,81 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
         />
       </View>
 
+      {isLoading ? <LoadingIndicator /> : null}
+
+      {!isLoading && profiles.length === 0 ? (
+        <EmptyState
+          message="Create your first profile to start tracking."
+        />
+      ) : null}
+
+      {!isLoading && profiles.length > 0 ? (
+        <AppText variant="label" color={colors.textMuted} style={styles.sectionLabel}>
+          Select a profile
+        </AppText>
+      ) : null}
+
+      {profiles.map((profile) => {
+        const accent = AVATAR_PALETTE[avatarColorIndex(profile.name)];
+        const count = cycleCounts.get(profile.id) ?? 0;
+        return (
+          <Pressable
+            key={profile.id}
+            onPress={() => {
+              void onSelectProfile(profile.id);
+            }}
+            accessibilityRole="button"
+          >
+            <AppCard
+              style={[
+                styles.profileCard,
+                { borderLeftWidth: 2, borderLeftColor: accent },
+              ]}
+            >
+              <ProfileAvatar name={profile.name} size={32} />
+              <View style={styles.profileInfo}>
+                <View style={styles.profileNameRow}>
+                  <AppText variant="subheading">{profile.name}</AppText>
+                  {activeProfileId === profile.id && (
+                    <View
+                      style={[styles.activeDot, { backgroundColor: accent }]}
+                    />
+                  )}
+                </View>
+                <AppText variant="caption" color={colors.textMuted}>
+                  {count > 0 ? `${count} cycle${count === 1 ? "" : "s"}` : "No cycles yet"}
+                </AppText>
+              </View>
+            </AppCard>
+          </Pressable>
+        );
+      })}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   title: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  inputRow: {
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  addButton: {
+    marginTop: spacing.xs,
+  },
+  sectionLabel: {
+    marginBottom: spacing.sm,
   },
   profileCard: {
     marginBottom: spacing.sm,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.sm,
+  },
+  profileInfo: {
+    flex: 1,
   },
   profileNameRow: {
     flexDirection: "row",
@@ -186,12 +220,5 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  inputRow: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  addButton: {
-    marginTop: spacing.xs,
   },
 });
