@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useState } from "react";
-import { InteractionManager, Pressable, StyleSheet, View } from "react-native";
+import { InteractionManager, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { getRepository } from "../db";
 import { Profile } from "../db/repo";
@@ -152,6 +152,7 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
       {profiles.map((profile) => {
         const accent = AVATAR_PALETTE[avatarColorIndex(profile.name)];
         const count = cycleCounts.get(profile.id) ?? 0;
+        const isActive = activeProfileId === profile.id;
         return (
           <Pressable
             key={profile.id}
@@ -159,18 +160,23 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
               void onSelectProfile(profile.id);
             }}
             accessibilityRole="button"
+            android_ripple={
+              Platform.OS === "android" ? { color: `${accent}20` } : undefined
+            }
           >
             <AppCard
               style={[
                 styles.profileCard,
-                { borderLeftWidth: 2, borderLeftColor: accent },
+                isActive
+                  ? { backgroundColor: `${accent}14` }
+                  : { borderLeftWidth: 2, borderLeftColor: accent },
               ]}
             >
               <ProfileAvatar name={profile.name} size={32} />
               <View style={styles.profileInfo}>
                 <View style={styles.profileNameRow}>
                   <AppText variant="subheading">{profile.name}</AppText>
-                  {activeProfileId === profile.id && (
+                  {isActive && (
                     <View
                       style={[styles.activeDot, { backgroundColor: accent }]}
                     />
