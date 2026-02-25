@@ -3,6 +3,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState as RNAppState, Pressable, StyleSheet, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 
@@ -268,8 +269,11 @@ export function CycleLogScreen({ route }: Props): ReactElement {
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
       ) : null}
 
+      <View style={styles.divider} />
+
       {pendingEntry && (
         <View style={styles.undoBar}>
+          <Feather name="rotate-ccw" size={16} color={colors.textMuted} />
           <AppText variant="body" style={styles.undoText}>
             Removed {pendingEntry.startDateIso}
           </AppText>
@@ -287,7 +291,7 @@ export function CycleLogScreen({ route }: Props): ReactElement {
       ) : null}
 
       {visibleEntries.map((entry) => (
-        <AppCard key={entry.id} style={styles.entryCard}>
+        <AppCard key={entry.id} style={[styles.entryCard, editingId === entry.id && styles.editCard]}>
           {editingId === entry.id ? (
             <View style={styles.editContainer}>
               <View>
@@ -322,7 +326,7 @@ export function CycleLogScreen({ route }: Props): ReactElement {
           ) : (
             <View>
               <View style={styles.entryRow}>
-                <AppText variant="body" style={styles.entryDate}>
+                <AppText variant="subheading" style={styles.entryDate}>
                   {entry.startDateIso}
                 </AppText>
                 <View style={styles.entryActions}>
@@ -402,11 +406,16 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: spacing.md,
   },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginBottom: spacing.sm,
+  },
   undoBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.infoBg,
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radii.md,
     paddingVertical: spacing.xs,
     paddingLeft: spacing.md,
@@ -414,7 +423,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   undoText: {
-    color: colors.info,
+    color: colors.textMuted,
     flex: 1,
   },
   subtitleRow: {
@@ -425,6 +434,9 @@ const styles = StyleSheet.create({
   },
   entryCard: {
     marginBottom: spacing.sm,
+  },
+  editCard: {
+    backgroundColor: colors.surfaceMuted,
   },
   entryRow: {
     flexDirection: "row",

@@ -27,6 +27,7 @@ export const colors = {
   infoBg: "#EEF3F7", // Light blue tint for banners
   destructive: "#C75450", // Alias of error — explicit semantic for delete/remove
   destructiveBg: "#FDF0EF", // Alias of errorBg — destructive action backgrounds
+  surfaceMuted: "#F5F5F3", // Warm gray — neutral edit/selected tint
 } as const;
 
 // ─── Spacing (4px grid) ─────────────────────────────────────────────
