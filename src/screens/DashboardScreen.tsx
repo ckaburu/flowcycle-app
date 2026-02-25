@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -32,10 +32,28 @@ type Props = CompositeScreenProps<
   BottomTabScreenProps<TabParamList>
 >;
 
+// ─── Helpers ────────────────────────────────────────────────────────
+
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function formatHeaderDate(date: Date): string {
+  try {
+    return date.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}`;
+  }
+}
+
 // ─── Component ───────────────────────────────────────────────────────
 
 export function DashboardScreen({ navigation }: Props): ReactElement {
   const { data, isLoading, error, refresh, clearError } = useDashboardData();
+  const { width: screenWidth } = useWindowDimensions();
+  const ringSize = Math.min(200, screenWidth - 2 * spacing.xl);
   const [logError, setLogError] = useState<string | null>(null);
 
   const handleLogPeriod = async (): Promise<void> => {
@@ -65,15 +83,6 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
     navigation.navigate("ProfilesTab", { screen: "Profiles" });
   };
 
-  const handleNavigateCycleLog = (): void => {
-    if (data) {
-      navigation.navigate("ProfilesTab", {
-        screen: "CycleLog",
-        params: { profileId: data.profileId },
-      });
-    }
-  };
-
   const dismissError = (): void => {
     clearError();
     setLogError(null);
@@ -100,7 +109,7 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
         <ErrorBanner message={displayError} onDismiss={dismissError} />
       ) : null}
 
-      {/* Header row: avatar + greeting */}
+      {/* Header row: avatar + date */}
       {data ? (
         <View style={styles.headerRow}>
           <ProfileAvatar
@@ -110,12 +119,11 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
           />
           <AppText
             variant="subheading"
-            style={styles.greeting}
+            style={styles.headerDate}
             numberOfLines={1}
           >
-            Hi, {data.profileName}
+            {formatHeaderDate(new Date())}
           </AppText>
-          <View style={styles.spacer} />
         </View>
       ) : null}
 
@@ -124,6 +132,7 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
         <CycleDayRing
           cycleDay={data?.cycleDay ?? null}
           typicalLength={data?.typicalLength ?? null}
+          size={ringSize}
         />
       </View>
 
@@ -165,9 +174,10 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
         />
       ) : null}
 
-      {/* Log Period button */}
+      {/* Log Period button — primary only when no cycle data yet */}
       <AppButton
         title="Log Period Start"
+        variant={data?.lastStart ? "secondary" : "primary"}
         onPress={() => {
           void handleLogPeriod();
         }}
@@ -175,15 +185,6 @@ export function DashboardScreen({ navigation }: Props): ReactElement {
         style={styles.logButton}
       />
 
-      {/* View Cycle Log link */}
-      {data ? (
-        <AppButton
-          title="View Cycle Log"
-          variant="ghost"
-          onPress={handleNavigateCycleLog}
-          style={styles.cycleLogLink}
-        />
-      ) : null}
     </ScreenContainer>
   );
 }
@@ -198,13 +199,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  greeting: {
+  headerDate: {
     marginLeft: spacing.sm,
     color: colors.text,
     flex: 1,
-  },
-  spacer: {
-    width: spacing.md,
   },
   ringContainer: {
     alignItems: "center",
@@ -217,7 +215,7 @@ const styles = StyleSheet.create({
   dataRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   dataLabel: {
     color: colors.textMuted,
@@ -228,10 +226,6 @@ const styles = StyleSheet.create({
   },
   logButton: {
     marginHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  cycleLogLink: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
 });

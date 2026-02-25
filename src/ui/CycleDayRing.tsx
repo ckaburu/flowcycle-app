@@ -17,7 +17,7 @@ type CycleDayRingProps = {
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-const DEFAULT_SIZE = 180;
+const DEFAULT_SIZE = 200;
 const RING_THICKNESS = 8;
 
 // ─── Component ───────────────────────────────────────────────────────
@@ -142,6 +142,9 @@ export function CycleDayRing({
           },
         ]}
       >
+        <AppText variant="caption" style={styles.dayLabel}>
+          Day
+        </AppText>
         <AppText
           variant="number"
           style={[
@@ -151,11 +154,11 @@ export function CycleDayRing({
         >
           {cycleDay !== null ? String(cycleDay) : "—"}
         </AppText>
-        <AppText variant="caption" style={styles.caption}>
-          {cycleDay !== null && typicalLength !== null
-            ? `of ${typicalLength} days`
-            : "day"}
-        </AppText>
+        {cycleDay !== null && typicalLength !== null ? (
+          <AppText variant="caption" style={styles.caption}>
+            of {typicalLength}
+          </AppText>
+        ) : null}
       </View>
     </View>
   );
@@ -189,6 +192,10 @@ const styles = StyleSheet.create({
     fontSize: typography.number.fontSize,
     fontWeight: typography.number.fontWeight,
     lineHeight: typography.number.lineHeight,
+  },
+  dayLabel: {
+    color: colors.textMuted,
+    marginBottom: -2,
   },
   caption: {
     color: colors.textMuted,
