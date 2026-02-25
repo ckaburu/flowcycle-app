@@ -1,11 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
 import { colors, elevation, radii, spacing } from "./tokens";
 
 type AppCardProps = {
   children: ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function AppCard({ children, style }: AppCardProps): ReactElement {

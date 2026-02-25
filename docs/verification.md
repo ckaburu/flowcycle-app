@@ -699,3 +699,63 @@ adb shell am start -n com.ckaburu.flowcycleapp/.MainActivity
 adb shell service call alarm 3 s16 America/New_York
 # Or your actual timezone
 ```
+
+---
+
+## Manual UX Regression Checklist — v0.4.3
+
+**Requires**: DEV build (`npx expo run:android`), emulator or device.
+
+### H1. Tab Icons
+
+- [ ] Bottom tabs show Feather stroke icons (home, users, settings) — no emoji labels
+- [ ] Icons are legible and correctly sized
+- [ ] Active tab icon has correct tint
+
+### H2. Profile Accent Surfaces
+
+- [ ] Profiles tab → each profile card has 2px left border in avatar palette color
+- [ ] Active profile shows 8px colored dot next to name
+- [ ] Colors are distinct but muted (not saturated)
+
+### H3. CycleLog — Profile Context
+
+- [ ] CycleLog header shows ProfileAvatar (24px) + profile name
+- [ ] Settings → "Period Reminders" toggle shows active profile name in label
+
+### H4. CycleLog — Add Cycle Start
+
+- [ ] Tap "Select date" field → native date picker opens
+- [ ] Date picker max = today (cannot select future date)
+- [ ] Select date → field shows YYYY-MM-DD
+- [ ] Cancel picker → field unchanged
+- [ ] Tap "Add Cycle Start" → entry appears in list
+
+### H5. CycleLog — Edit Cycle Start
+
+- [ ] Tap "Edit" on an entry → inline edit mode with date picker field
+- [ ] Tap date field → native date picker opens, pre-filled with current date
+- [ ] Select new date → field updates
+- [ ] Tap "Save" → entry updated, list refreshes
+- [ ] Tap "Cancel" → edit mode dismissed, no changes
+
+### H6. CycleLog — Delete with Undo
+
+- [ ] Tap "Delete" → entry disappears immediately (no confirmation dialog)
+- [ ] Undo bar appears: "Removed YYYY-MM-DD" + Undo button
+- [ ] Tap "Undo" within 5s → entry reappears, undo bar disappears
+- [ ] Delete again, wait 5s → entry permanently removed (undo bar disappears)
+- [ ] Delete then navigate away → entry permanently removed (flush on blur)
+- [ ] Delete then background app → entry permanently removed (flush on background)
+
+### H7. Cycle Captions
+
+- [ ] Each entry card shows caption below date: "Cycle #N · X days"
+- [ ] First/oldest entry shows "Cycle #1" (no interval)
+- [ ] Subsequent entries show correct interval from previous
+- [ ] Caption uses muted color, caption typography
+
+### H8. Empty State
+
+- [ ] CycleLog with no entries → "No cycle starts yet." empty state
+- [ ] During undo (last entry pending delete) → undo bar visible, no false empty state

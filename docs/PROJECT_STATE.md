@@ -3,7 +3,7 @@
 > Authoritative session-to-session snapshot. Read this before making changes.
 > Update after every milestone or significant change.
 
-**Last updated**: 2026-02-24 (Milestone 2 — Data Integrity & Cycle Editing COMPLETE)
+**Last updated**: 2026-02-25 (v0.4.3 released, Milestone 3 complete)
 
 ---
 
@@ -11,14 +11,14 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.4.2 (stable) |
-| Branch | `feature/encryption` (sole active branch) |
-| Tests | 166 passed, 3 todo (Realm-specific manual), 0 failures |
+| Version | 0.4.3 (stable, released) |
+| Branch | `main` |
+| Tests | 198 passed, 3 todo (Realm-specific manual), 0 failures |
 | Types | `tsc --noEmit` clean |
-| Tags | `v0.4.0-rc1` at `49c0cb0`, `v0.4.1` at `73e872a`, `v0.4.2` at HEAD |
+| Tags | `v0.4.0-rc1`, `v0.4.1`, `v0.4.2`, `v0.4.3` |
 | EAS builds | `76a2ef96` (v0.4.0-rc1, preview) |
-| Milestone 2 | COMPLETE — Data Integrity & Cycle Editing |
-| Next action | Milestone 3 planning |
+| Milestone 3 | COMPLETE — UX Implementation (v0.4.3) |
+| Next action | Milestone 4 — UX Refinement (beauty + clarity + reduced friction) |
 
 ## Architecture
 
@@ -97,10 +97,23 @@ Mutation operations:
 | Delete | `deleteCycleStart(id)` | Idempotent (no-op if not found) |
 
 UI wiring (CycleLogScreen):
-- Edit: inline `AppInput` with Save/Cancel actions
-- Delete: `Alert.alert` confirmation dialog with destructive action
+- Edit: inline date picker with Save/Cancel actions
+- Delete: deferred undo pattern (5s window, flush on blur/background)
 - Error display: `ErrorBanner` with typed domain error messages (`DuplicateCycleStartError`, `FutureDateError`)
 - Post-mutation: shared `fireAndForgetSync()` helper triggers notification reconciliation
+- Cycle metadata: `computeEntryMeta()` displays cycle number + interval per entry card
+
+### UX System (Milestone 3 — v0.4.3)
+
+| Feature | Implementation |
+|---|---|
+| Tab icons | Feather stroke icons via `@expo/vector-icons` replacing emoji labels |
+| Profile accents | 2px left border on profile cards using `AVATAR_PALETTE`; 8px active dot |
+| Avatar palette | 6 colors darkened to 3.0–3.17:1 contrast ratio vs white (WCAG AA non-text) |
+| Profile context | ProfileAvatar in CycleLog header; profile name in Settings toggle label |
+| Deferred undo | `DeferredDelete` class: 5s timer, flush on blur/background/new request, idempotent |
+| Native date picker | `@react-native-community/datetimepicker`; local-timezone `localDateToIso`/`isoToLocalDate` |
+| Cycle captions | `Cycle #N · X days` below each entry date; `computeEntryMeta()` pure function |
 
 ### Encryption
 
@@ -127,7 +140,10 @@ UI wiring (CycleLogScreen):
 | v0.4.1 timezone-sync | Done | Local todayIso, foreground re-sync, concurrency guard. `TIMEZONE_CHANGED` broadcast intentionally deferred (ADR 0007). |
 | **Milestone 1** | **COMPLETE** | **Notification Reliability — v0.4 + v0.4.1. All reliability guarantees verified.** |
 | v0.4.2 data-integrity | Done | Repo-layer uniqueness + future-date enforcement, edit/delete cycle starts, canonical sort, prediction threshold, 166 tests |
-| **Milestone 2** | **COMPLETE** | **Data Integrity & Cycle Editing — v0.4.2. All mutation invariants enforced across 3 repo implementations.** |
+| **Milestone 2** | **COMPLETE** | **Data Integrity & Cycle Editing — v0.4.2. All mutation invariants enforced across 3 repo implementations. Emulator regression PASS (2026-02-25).** |
+| v0.4.3 ux-impl | Done | Feather icons, profile accents, deferred undo, native date picker, cycle captions, 198 tests |
+| **Milestone 3** | **COMPLETE** | **UX Implementation — v0.4.3. Design system applied across all screens. WCAG-compliant palette. Deferred undo + native date picker in CycleLog.** |
+| **Milestone 4** | **NEXT** | **UX Refinement — beauty + clarity + reduced friction. No algorithmic insights.** |
 
 ## ADRs
 
@@ -151,7 +167,7 @@ UI wiring (CycleLogScreen):
 | `expo-sqlite` still in plugins | Loaded but not active (`app.json:31`) |
 | Doc bug in verification.md | Encryption checklist step 3 references `flowcycle_realm_key` but code uses `realm_encryption_key_v1` |
 | Root `PROJECT_STATE.md` stale | Gitignored local file from Roo era; superseded by this file |
-| No date picker | CycleLogScreen uses text input (YYYY-MM-DD) — date picker deferred to future UX milestone |
+| ~~No date picker~~ | RESOLVED in v0.4.3 — native `@react-native-community/datetimepicker` replaces text input |
 
 ## Tech Stack
 

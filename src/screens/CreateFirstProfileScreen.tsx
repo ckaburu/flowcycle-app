@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { StyleSheet, View } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
 import { ScreenContainer, AppText, AppInput, AppButton, ErrorBanner } from "../ui";
 import { colors, spacing } from "../ui/tokens";
 import { getRepository } from "../db";
@@ -60,9 +61,12 @@ export function CreateFirstProfileScreen({
             returnKeyType="done"
             onSubmitEditing={onCreateProfile}
           />
-          <AppText variant="caption" style={styles.privacy}>
-            🔒 This stays on your device. Always.
-          </AppText>
+          <View style={styles.privacyRow}>
+            <Feather name="lock" size={14} color={colors.textMuted} />
+            <AppText variant="caption" style={styles.privacy}>
+              This stays on your device. Always.
+            </AppText>
+          </View>
         </View>
         <View style={styles.footer}>
           {error !== "" && (
@@ -94,10 +98,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     textAlign: "center",
   },
+  privacyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
   privacy: {
     color: colors.textMuted,
-    marginTop: spacing.md,
-    textAlign: "center",
   },
   footer: {
     paddingBottom: spacing.xl,

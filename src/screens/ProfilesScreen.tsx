@@ -6,7 +6,7 @@ import { InteractionManager, Pressable, StyleSheet, View } from "react-native";
 
 import { getRepository } from "../db";
 import { Profile } from "../db/repo";
-import { saveActiveProfileId } from "../domain/AppState";
+import { loadActiveProfileId, saveActiveProfileId } from "../domain/AppState";
 import { syncNotifications } from "../domain/syncNotifications";
 import { devSyncLogger } from "../domain/devSyncLogger";
 import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
@@ -21,6 +21,7 @@ import {
   ScreenContainer,
   spacing,
 } from "../ui";
+import { AVATAR_PALETTE, avatarColorIndex } from "../ui/avatarColor";
 import type { ProfilesStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<ProfilesStackParamList, "Profiles">;
@@ -30,6 +31,7 @@ const repository = getRepository();
 export function ProfilesScreen({ navigation }: Props): ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<number | null>(null);
   const [newProfileName, setNewProfileName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -38,8 +40,12 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
     setError(null);
 
     try {
-      const nextProfiles = await repository.listProfiles();
+      const [nextProfiles, currentActiveId] = await Promise.all([
+        repository.listProfiles(),
+        loadActiveProfileId(),
+      ]);
       setProfiles(nextProfiles);
+      setActiveProfileId(currentActiveId);
     } catch {
       setError("Failed to load profiles.");
     } finally {
@@ -77,6 +83,7 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
     try {
       setError(null);
       await saveActiveProfileId(profileId);
+      setActiveProfileId(profileId);
       navigation.navigate("CycleLog", { profileId });
 
       // Fire-and-forget: re-sync notifications after profile switch
@@ -109,20 +116,35 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
         />
       ) : null}
 
-      {profiles.map((profile) => (
-        <Pressable
-          key={profile.id}
-          onPress={() => {
-            void onSelectProfile(profile.id);
-          }}
-          accessibilityRole="button"
-        >
-          <AppCard style={styles.profileCard}>
-            <AppText variant="subheading">{profile.name}</AppText>
-            <AppText variant="caption">ID: {profile.id}</AppText>
-          </AppCard>
-        </Pressable>
-      ))}
+      {profiles.map((profile) => {
+        const accent = AVATAR_PALETTE[avatarColorIndex(profile.name)];
+        return (
+          <Pressable
+            key={profile.id}
+            onPress={() => {
+              void onSelectProfile(profile.id);
+            }}
+            accessibilityRole="button"
+          >
+            <AppCard
+              style={[
+                styles.profileCard,
+                { borderLeftWidth: 2, borderLeftColor: accent },
+              ]}
+            >
+              <View style={styles.profileNameRow}>
+                <AppText variant="subheading">{profile.name}</AppText>
+                {activeProfileId === profile.id && (
+                  <View
+                    style={[styles.activeDot, { backgroundColor: accent }]}
+                  />
+                )}
+              </View>
+              <AppText variant="caption">ID: {profile.id}</AppText>
+            </AppCard>
+          </Pressable>
+        );
+      })}
 
       <View style={styles.inputRow}>
         <AppInput
@@ -154,6 +176,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  profileNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   inputRow: {
     marginTop: spacing.lg,

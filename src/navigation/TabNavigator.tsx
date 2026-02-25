@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
-import { Text } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import Feather from "@expo/vector-icons/Feather";
 
 import { CycleLogScreen } from "../screens/CycleLogScreen";
 import { DashboardScreen } from "../screens/DashboardScreen";
@@ -100,7 +100,7 @@ export function TabNavigator(): ReactElement {
         options={{
           tabBarLabel: "Dashboard",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>📊</Text>
+            <Feather name="activity" size={22} color={color} />
           ),
         }}
       />
@@ -110,7 +110,7 @@ export function TabNavigator(): ReactElement {
         options={{
           tabBarLabel: "Profiles",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>👤</Text>
+            <Feather name="user" size={22} color={color} />
           ),
         }}
       />
@@ -120,7 +120,7 @@ export function TabNavigator(): ReactElement {
         options={{
           tabBarLabel: "Settings",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>⚙️</Text>
+            <Feather name="settings" size={22} color={color} />
           ),
         }}
       />

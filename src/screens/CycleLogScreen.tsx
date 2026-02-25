@@ -1,26 +1,31 @@
 import type { ReactElement } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useCallback, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppState as RNAppState, Pressable, StyleSheet, View } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 
 import { getRepository } from "../db";
 import { CycleStart, Profile } from "../db/repo";
+import { computeEntryMeta } from "../domain/cycleMath";
+import { DeferredDelete } from "../domain/deferredDelete";
 import { DuplicateCycleStartError, FutureDateError } from "../domain/errors";
 import { syncNotifications } from "../domain/syncNotifications";
 import { devSyncLogger } from "../domain/devSyncLogger";
 import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
-import { isValidIsoDate } from "../utils/date";
+import { isValidIsoDate, localDateToIso, isoToLocalDate } from "../utils/date";
 import {
   AppButton,
   AppCard,
-  AppInput,
   AppText,
   EmptyState,
   ErrorBanner,
   LoadingIndicator,
+  ProfileAvatar,
   ScreenContainer,
   colors,
+  radii,
   spacing,
 } from "../ui";
 import type { ProfilesStackParamList } from "../navigation/types";
@@ -62,6 +67,16 @@ export function CycleLogScreen({ route }: Props): ReactElement {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDateInput, setEditDateInput] = useState("");
 
+  // Deferred delete: entry is hidden from UI but not yet removed from DB
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const commitDeleteRef = useRef<(id: number) => void>(() => {});
+  const deferredRef = useRef<DeferredDelete | null>(null);
+  if (deferredRef.current === null) {
+    deferredRef.current = new DeferredDelete(
+      (id) => commitDeleteRef.current(id),
+    );
+  }
+
   const loadData = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -89,21 +104,34 @@ export function CycleLogScreen({ route }: Props): ReactElement {
   useFocusEffect(
     useCallback(() => {
       void loadData();
+      return () => {
+        // Flush pending deletion on blur (navigate away) or unmount
+        deferredRef.current!.flush();
+      };
     }, [loadData])
   );
+
+  // Flush pending deletion when app goes to background
+  useEffect(() => {
+    const sub = RNAppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        deferredRef.current!.flush();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // ── Add ──────────────────────────────────────────────────────────────
 
   const onAddCycleStart = async (): Promise<void> => {
-    const dateValue = startDateInput.trim();
-    if (!isValidIsoDate(dateValue)) {
-      setError("Date must be in YYYY-MM-DD format.");
+    if (!startDateInput || !isValidIsoDate(startDateInput)) {
+      setError("Please select a date.");
       return;
     }
 
     try {
       setError(null);
-      await repository.addCycleStart(profileId, dateValue);
+      await repository.addCycleStart(profileId, startDateInput);
       setStartDateInput("");
       await loadData();
       fireAndForgetSync();
@@ -128,15 +156,14 @@ export function CycleLogScreen({ route }: Props): ReactElement {
   const onSaveEdit = async (): Promise<void> => {
     if (editingId === null) return;
 
-    const dateValue = editDateInput.trim();
-    if (!isValidIsoDate(dateValue)) {
-      setError("Date must be in YYYY-MM-DD format.");
+    if (!editDateInput || !isValidIsoDate(editDateInput)) {
+      setError("Please select a date.");
       return;
     }
 
     try {
       setError(null);
-      await repository.updateCycleStart(editingId, dateValue);
+      await repository.updateCycleStart(editingId, editDateInput);
       setEditingId(null);
       setEditDateInput("");
       await loadData();
@@ -146,73 +173,138 @@ export function CycleLogScreen({ route }: Props): ReactElement {
     }
   };
 
-  // ── Delete ───────────────────────────────────────────────────────────
+  // ── Delete (deferred with undo) ─────────────────────────────────────
 
-  const onDeleteCycleStart = (entry: CycleStart): void => {
-    Alert.alert(
-      "Delete Cycle Start",
-      `Remove the cycle start on ${entry.startDateIso}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => void performDelete(entry.id),
-        },
-      ],
-    );
+  // Keep commit callback fresh to avoid stale closures in DeferredDelete
+  commitDeleteRef.current = (id: number) => {
+    setPendingDeleteId(null);
+    void (async () => {
+      try {
+        setError(null);
+        await repository.deleteCycleStart(id);
+        await loadData();
+        fireAndForgetSync();
+      } catch (caught) {
+        setError(userMessage(caught));
+      }
+    })();
   };
 
-  const performDelete = async (id: number): Promise<void> => {
-    try {
-      setError(null);
-      await repository.deleteCycleStart(id);
-      if (editingId === id) {
-        setEditingId(null);
-        setEditDateInput("");
-      }
-      await loadData();
-      fireAndForgetSync();
-    } catch (caught) {
-      setError(userMessage(caught));
+  const onDeleteCycleStart = (entry: CycleStart): void => {
+    if (editingId === entry.id) {
+      setEditingId(null);
+      setEditDateInput("");
+    }
+    setPendingDeleteId(entry.id);
+    deferredRef.current!.request(entry.id);
+  };
+
+  const handleUndo = (): void => {
+    if (deferredRef.current!.undo()) {
+      setPendingDeleteId(null);
     }
   };
 
+  // ── Date picker ───────────────────────────────────────────────────────
+
+  const [pickerTarget, setPickerTarget] = useState<"add" | "edit" | null>(null);
+
+  const pickerValue = useMemo((): Date => {
+    const iso = pickerTarget === "add" ? startDateInput : editDateInput;
+    if (iso && isValidIsoDate(iso)) {
+      return isoToLocalDate(iso);
+    }
+    return new Date();
+  }, [pickerTarget, startDateInput, editDateInput]);
+
+  const handlePickerChange = useCallback(
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      const target = pickerTarget;
+      setPickerTarget(null);
+      if (event.type === "set" && selectedDate && target) {
+        const iso = localDateToIso(selectedDate);
+        if (target === "add") {
+          setStartDateInput(iso);
+        } else {
+          setEditDateInput(iso);
+        }
+      }
+    },
+    [pickerTarget],
+  );
+
   // ── Render ───────────────────────────────────────────────────────────
+
+  const visibleEntries = cycleStarts.filter(
+    (entry) => entry.id !== pendingDeleteId,
+  );
+  const pendingEntry =
+    pendingDeleteId !== null
+      ? cycleStarts.find((e) => e.id === pendingDeleteId) ?? null
+      : null;
+
+  // Cycle number + interval metadata for each entry (sorted by date ascending)
+  const entryMeta = useMemo(() => computeEntryMeta(cycleStarts), [cycleStarts]);
 
   return (
     <ScreenContainer>
       <AppText variant="heading" style={styles.title}>
         Cycle Log
       </AppText>
-      <AppText variant="subheading" color={colors.textMuted} style={styles.subtitle}>
-        {profile ? profile.name : `Profile ${profileId}`}
-      </AppText>
+      {profile ? (
+        <View style={styles.subtitleRow}>
+          <ProfileAvatar name={profile.name} size={24} />
+          <AppText variant="subheading" color={colors.textMuted}>
+            {profile.name}
+          </AppText>
+        </View>
+      ) : (
+        <AppText variant="subheading" color={colors.textMuted} style={styles.subtitle}>
+          Profile {profileId}
+        </AppText>
+      )}
 
       {error ? (
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
       ) : null}
 
+      {pendingEntry && (
+        <View style={styles.undoBar}>
+          <AppText variant="body" style={styles.undoText}>
+            Removed {pendingEntry.startDateIso}
+          </AppText>
+          <AppButton title="Undo" variant="ghost" onPress={handleUndo} />
+        </View>
+      )}
+
       {isLoading ? <LoadingIndicator /> : null}
 
-      {!isLoading && cycleStarts.length === 0 ? (
+      {!isLoading && visibleEntries.length === 0 && pendingDeleteId === null ? (
         <EmptyState
           message="No cycle starts yet."
           hint="Add your first cycle start date below."
         />
       ) : null}
 
-      {cycleStarts.map((entry) => (
+      {visibleEntries.map((entry) => (
         <AppCard key={entry.id} style={styles.entryCard}>
           {editingId === entry.id ? (
             <View style={styles.editContainer}>
-              <AppInput
-                label="Edit date"
-                value={editDateInput}
-                onChangeText={setEditDateInput}
-                placeholder="YYYY-MM-DD"
-                autoCapitalize="none"
-              />
+              <View>
+                <AppText variant="label" style={styles.dateFieldLabel}>
+                  Edit date
+                </AppText>
+                <Pressable
+                  style={styles.dateField}
+                  onPress={() => setPickerTarget("edit")}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select edit date"
+                >
+                  <AppText variant="body">
+                    {editDateInput}
+                  </AppText>
+                </Pressable>
+              </View>
               <View style={styles.editActions}>
                 <AppButton
                   title="Save"
@@ -228,35 +320,60 @@ export function CycleLogScreen({ route }: Props): ReactElement {
               </View>
             </View>
           ) : (
-            <View style={styles.entryRow}>
-              <AppText variant="body" style={styles.entryDate}>
-                {entry.startDateIso}
-              </AppText>
-              <View style={styles.entryActions}>
-                <AppButton
-                  title="Edit"
-                  variant="ghost"
-                  onPress={() => onStartEdit(entry)}
-                />
-                <AppButton
-                  title="Delete"
-                  variant="danger"
-                  onPress={() => onDeleteCycleStart(entry)}
-                />
+            <View>
+              <View style={styles.entryRow}>
+                <AppText variant="body" style={styles.entryDate}>
+                  {entry.startDateIso}
+                </AppText>
+                <View style={styles.entryActions}>
+                  <AppButton
+                    title="Edit"
+                    variant="ghost"
+                    onPress={() => onStartEdit(entry)}
+                  />
+                  <AppButton
+                    title="Delete"
+                    variant="danger"
+                    onPress={() => onDeleteCycleStart(entry)}
+                  />
+                </View>
               </View>
+              {(() => {
+                const meta = entryMeta.get(entry.id);
+                if (!meta) return null;
+                const label = meta.intervalDays !== null
+                  ? `Cycle #${meta.cycleNumber} · ${meta.intervalDays} days`
+                  : `Cycle #${meta.cycleNumber}`;
+                return (
+                  <AppText variant="caption" color={colors.textMuted} style={styles.entryCaption}>
+                    {label}
+                  </AppText>
+                );
+              })()}
             </View>
           )}
         </AppCard>
       ))}
 
       <View style={styles.inputRow}>
-        <AppInput
-          label="Start date"
-          value={startDateInput}
-          onChangeText={setStartDateInput}
-          placeholder="YYYY-MM-DD"
-          autoCapitalize="none"
-        />
+        <View>
+          <AppText variant="label" style={styles.dateFieldLabel}>
+            Start date
+          </AppText>
+          <Pressable
+            style={styles.dateField}
+            onPress={() => setPickerTarget("add")}
+            accessibilityRole="button"
+            accessibilityLabel="Select start date"
+          >
+            <AppText
+              variant="body"
+              style={startDateInput ? undefined : styles.dateFieldPlaceholder}
+            >
+              {startDateInput || "Select date"}
+            </AppText>
+          </Pressable>
+        </View>
         <AppButton
           title="Add Cycle Start"
           onPress={() => {
@@ -265,6 +382,15 @@ export function CycleLogScreen({ route }: Props): ReactElement {
           style={styles.addButton}
         />
       </View>
+
+      {pickerTarget !== null && (
+        <DateTimePicker
+          value={pickerValue}
+          mode="date"
+          maximumDate={new Date()}
+          onChange={handlePickerChange}
+        />
+      )}
     </ScreenContainer>
   );
 }
@@ -274,6 +400,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   subtitle: {
+    marginBottom: spacing.md,
+  },
+  undoBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.infoBg,
+    borderRadius: radii.md,
+    paddingVertical: spacing.xs,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  undoText: {
+    color: colors.info,
+    flex: 1,
+  },
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   entryCard: {
@@ -287,9 +434,28 @@ const styles = StyleSheet.create({
   entryDate: {
     flex: 1,
   },
+  entryCaption: {
+    marginTop: spacing.xs,
+  },
   entryActions: {
     flexDirection: "row",
     gap: spacing.xs,
+  },
+  dateFieldLabel: {
+    marginBottom: spacing.xs,
+  },
+  dateField: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  dateFieldPlaceholder: {
+    color: colors.textMuted,
   },
   editContainer: {
     gap: spacing.sm,

@@ -4,12 +4,12 @@
  */
 
 export const AVATAR_PALETTE = [
-  "#D4738C", // dusty rose
-  "#8FB5A3", // sage green
-  "#E8C87A", // warm gold
-  "#7BAFD4", // soft blue
-  "#C49BD4", // lavender
-  "#D4A07B", // warm tan
+  "#D4738C", // dusty rose   — L 0.282, CR 3.17:1
+  "#6A9C85", // sage green   — L 0.285, CR 3.13:1
+  "#B88B20", // warm gold    — L 0.288, CR 3.11:1
+  "#5699C8", // soft blue    — L 0.289, CR 3.09:1
+  "#B37EC8", // lavender     — L 0.287, CR 3.12:1
+  "#C78252", // warm tan     — L 0.287, CR 3.11:1
 ] as const;
 
 /**

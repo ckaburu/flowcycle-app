@@ -75,6 +75,28 @@ export function typicalCycleLength(startDatesIso: string[], maxN = 3): number | 
   return median(recent);
 }
 
+export type EntryMeta = { cycleNumber: number; intervalDays: number | null };
+
+export function computeEntryMeta(
+  entries: ReadonlyArray<{ id: number; startDateIso: string }>,
+): Map<number, EntryMeta> {
+  const sorted = [...entries].sort((a, b) =>
+    a.startDateIso.localeCompare(b.startDateIso),
+  );
+  const map = new Map<number, EntryMeta>();
+  for (let i = 0; i < sorted.length; i++) {
+    const entry = sorted[i];
+    let intervalDays: number | null = null;
+    if (i > 0) {
+      const prev = parseIsoDate(sorted[i - 1].startDateIso);
+      const curr = parseIsoDate(entry.startDateIso);
+      intervalDays = daysBetween(prev, curr);
+    }
+    map.set(entry.id, { cycleNumber: i + 1, intervalDays });
+  }
+  return map;
+}
+
 export function estimateNextStart(lastStartIso: string, typicalLen: number): string {
   if (!Number.isFinite(typicalLen)) {
     throw new Error("typicalLen must be a finite number.");

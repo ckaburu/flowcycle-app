@@ -1,6 +1,20 @@
 # Changelog
 
-## v0.4.2 — Data Integrity & Cycle Editing (2026-02-24)
+## v0.4.3 — UX Implementation (2026-02-25)
+- Replaced emoji tab labels with Feather stroke icons (`@expo/vector-icons`): home, users, settings.
+- Added per-profile accent surfaces: 2px left border on profile cards using avatar palette color, 8px active dot for selected profile.
+- Darkened avatar palette (5 of 6 colors) to meet WCAG 3:1 contrast ratio against white card backgrounds.
+- Added ProfileAvatar (24px) to CycleLog header alongside profile name.
+- Added active profile name to Settings period reminders toggle label: "Period Reminders (CK)".
+- Replaced confirmation dialog with deferred undo pattern for cycle start deletion: entry hidden immediately, 5s undo window, auto-commits on navigation/background.
+- Replaced YYYY-MM-DD text input with native platform date picker (`@react-native-community/datetimepicker`). Max date = today enforced.
+- Added timezone-safe local date conversion utilities: `localDateToIso()`, `isoToLocalDate()`.
+- Added cycle number and interval caption to entry cards: "Cycle #3 · 28 days".
+- Extracted `computeEntryMeta()` pure function for cycle metadata computation.
+- Extended design tokens: semantic colors, typography roles, spacing aliases.
+- Added 32 new tests (198 total passing): deferredDelete (14), date utils (13), computeEntryMeta (5).
+
+## v0.4.2 — Data Integrity & Cycle Editing (2026-02-24, released 2026-02-25)
 - Added edit and delete cycle start entries in CycleLogScreen with inline editing and confirmation dialog.
 - Added repository-layer uniqueness enforcement: `(profileId, startDateIso)` duplicate check on add and update, throwing `DuplicateCycleStartError`.
 - Added future-date rejection: `assertNotFutureDate()` on add and update, throwing `FutureDateError`.

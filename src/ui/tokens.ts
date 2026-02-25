@@ -1,6 +1,6 @@
 /**
  * Design tokens for FlowCycle.
- * Light theme only (dark mode deferred to v0.4).
+ * Light theme only (dark mode deferred).
  * System fonts only — no custom font loading.
  */
 
@@ -21,6 +21,12 @@ export const colors = {
   warning: "#E09640", // Amber/Orange (overflow indicator)
   disabled: "#BFBFBF", // Disabled elements
   disabledBg: "#F0F0EE", // Disabled button background
+  success: "#6B9E78", // Muted Green — confirmation states
+  successBg: "#EFF6F0", // Light green tint for banners
+  info: "#6B8DAE", // Steel Blue — informational states
+  infoBg: "#EEF3F7", // Light blue tint for banners
+  destructive: "#C75450", // Alias of error — explicit semantic for delete/remove
+  destructiveBg: "#FDF0EF", // Alias of errorBg — destructive action backgrounds
 } as const;
 
 // ─── Spacing (4px grid) ─────────────────────────────────────────────
@@ -32,6 +38,8 @@ export const spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
+  screenH: 16, // Horizontal screen padding (alias of md)
+  cardPad: 16, // Card internal padding (alias of md)
 } as const;
 
 // ─── Typography ─────────────────────────────────────────────────────
@@ -42,7 +50,9 @@ export type TypographyRole =
   | "body"
   | "caption"
   | "label"
-  | "number";
+  | "number"
+  | "numberSmall"
+  | "sectionTitle";
 
 export const typography: Record<
   TypographyRole,
@@ -54,6 +64,8 @@ export const typography: Record<
   caption: { fontSize: 13, fontWeight: "400", lineHeight: 18 },
   label: { fontSize: 14, fontWeight: "500", lineHeight: 20 },
   number: { fontSize: 32, fontWeight: "700", lineHeight: 40 },
+  numberSmall: { fontSize: 20, fontWeight: "600", lineHeight: 28 },
+  sectionTitle: { fontSize: 13, fontWeight: "600", lineHeight: 18 },
 } as const;
 
 // ─── Border Radii ───────────────────────────────────────────────────

@@ -32,6 +32,7 @@ type Props = NativeStackScreenProps<SettingsStackParamList, "Settings">;
 export function SettingsScreen({ navigation }: Props): ReactElement {
   const [pinSet, setPinSet] = useState(false);
   const [activeProfileId, setActiveProfileId] = useState<number | null>(null);
+  const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [daysBefore, setDaysBefore] = useState(2);
   const [notifLoading, setNotifLoading] = useState(true);
@@ -41,11 +42,17 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
     const profileId = await loadActiveProfileId();
     setActiveProfileId(profileId);
     if (profileId === null) {
+      setActiveProfileName(null);
       setNotifLoading(false);
       return;
     }
     const repo = getRepository();
-    const pref = await repo.getNotificationPreference(profileId);
+    const [pref, profiles] = await Promise.all([
+      repo.getNotificationPreference(profileId),
+      repo.listProfiles(),
+    ]);
+    const match = profiles.find((p) => p.id === profileId);
+    setActiveProfileName(match?.name ?? null);
     if (pref) {
       setNotifEnabled(pref.enabled);
       setDaysBefore(pref.daysBefore);
@@ -184,7 +191,7 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
 
           <View style={styles.toggleRow} testID="settings-period-reminders">
             <AppText variant="body" style={styles.toggleLabel}>
-              Period Reminders
+              Period Reminders{activeProfileName ? ` (${activeProfileName})` : ""}
             </AppText>
             <Switch
               value={notifEnabled}
@@ -206,17 +213,17 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
             <>
               <SectionHeader title="Dev Tools" />
               <ListItem
-                label="🧪 Test notification (5s)"
+                label="Test notification (5s)"
                 onPress={() => void handleDevNotification(5)}
                 testID="settings-dev-notif-5s"
               />
               <ListItem
-                label="🧪 Test notification (30s)"
+                label="Test notification (30s)"
                 onPress={() => void handleDevNotification(30)}
                 testID="settings-dev-notif-30s"
               />
               <ListItem
-                label="🗑️ Cancel all notifications"
+                label="Cancel all notifications"
                 onPress={() => void handleDevCancelAll()}
                 testID="settings-dev-cancel-all"
               />

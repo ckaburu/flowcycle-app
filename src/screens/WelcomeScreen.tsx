@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { StyleSheet, View } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
 import { ScreenContainer, AppText, AppButton } from "../ui";
 import { colors, spacing } from "../ui/tokens";
 
@@ -12,8 +13,14 @@ export function WelcomeScreen({ onNext }: WelcomeScreenProps): ReactElement {
     <ScreenContainer scroll={false}>
       <View style={styles.container}>
         <View style={styles.content}>
+          <Feather
+            name="circle"
+            size={48}
+            color={colors.primary}
+            style={styles.logo}
+          />
           <AppText variant="heading" style={styles.title}>
-            🌸 FlowCycle
+            FlowCycle
           </AppText>
           <AppText variant="body" style={styles.subtitle}>
             Your cycle, your device
@@ -40,6 +47,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  logo: {
+    marginBottom: spacing.md,
   },
   title: {
     marginBottom: spacing.md,

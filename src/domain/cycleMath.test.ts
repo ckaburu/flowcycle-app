@@ -1,5 +1,6 @@
 import {
   computeCycleDay,
+  computeEntryMeta,
   estimateNextStart,
   median,
   typicalCycleLength,
@@ -110,6 +111,54 @@ describe("cycleMath", () => {
   describe("estimateNextStart", () => {
     it("returns YYYY-MM-DD formatted next start", () => {
       expect(estimateNextStart("2026-01-31", 29)).toBe("2026-03-01");
+    });
+  });
+
+  describe("computeEntryMeta", () => {
+    it("returns empty map for empty input", () => {
+      expect(computeEntryMeta([])).toEqual(new Map());
+    });
+
+    it("assigns Cycle #1 with no interval for single entry", () => {
+      const entries = [{ id: 10, startDateIso: "2026-01-15" }];
+      const meta = computeEntryMeta(entries);
+      expect(meta.get(10)).toEqual({ cycleNumber: 1, intervalDays: null });
+    });
+
+    it("computes cycle numbers and intervals for multiple entries", () => {
+      const entries = [
+        { id: 1, startDateIso: "2026-01-01" },
+        { id: 2, startDateIso: "2026-01-29" },
+        { id: 3, startDateIso: "2026-02-26" },
+      ];
+      const meta = computeEntryMeta(entries);
+      expect(meta.get(1)).toEqual({ cycleNumber: 1, intervalDays: null });
+      expect(meta.get(2)).toEqual({ cycleNumber: 2, intervalDays: 28 });
+      expect(meta.get(3)).toEqual({ cycleNumber: 3, intervalDays: 28 });
+    });
+
+    it("sorts by date regardless of input order", () => {
+      const entries = [
+        { id: 3, startDateIso: "2026-02-26" },
+        { id: 1, startDateIso: "2026-01-01" },
+        { id: 2, startDateIso: "2026-01-29" },
+      ];
+      const meta = computeEntryMeta(entries);
+      expect(meta.get(1)).toEqual({ cycleNumber: 1, intervalDays: null });
+      expect(meta.get(2)).toEqual({ cycleNumber: 2, intervalDays: 28 });
+      expect(meta.get(3)).toEqual({ cycleNumber: 3, intervalDays: 28 });
+    });
+
+    it("handles varying intervals correctly", () => {
+      const entries = [
+        { id: 10, startDateIso: "2026-01-01" },
+        { id: 20, startDateIso: "2026-01-15" },
+        { id: 30, startDateIso: "2026-02-15" },
+      ];
+      const meta = computeEntryMeta(entries);
+      expect(meta.get(10)).toEqual({ cycleNumber: 1, intervalDays: null });
+      expect(meta.get(20)).toEqual({ cycleNumber: 2, intervalDays: 14 });
+      expect(meta.get(30)).toEqual({ cycleNumber: 3, intervalDays: 31 });
     });
   });
 });
