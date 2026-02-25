@@ -759,3 +759,57 @@ adb shell service call alarm 3 s16 America/New_York
 
 - [ ] CycleLog with no entries → "No cycle starts yet." empty state
 - [ ] During undo (last entry pending delete) → undo bar visible, no false empty state
+
+---
+
+## Manual UX Regression Checklist — v0.4.4
+
+**Requires**: DEV build (`npx expo run:android`), emulator or device.
+
+### I1. Dashboard — Date Header
+
+- [ ] Dashboard header shows formatted date (e.g. "Tuesday, Feb 25") — not "Hi, {name}"
+- [ ] ProfileAvatar still visible and tappable (navigates to Profiles)
+- [ ] Date is legible, subheading size
+
+### I2. Dashboard — Responsive Ring
+
+- [ ] Ring is 200dp on standard screen
+- [ ] On small screen (or split view), ring does not overflow horizontally
+- [ ] "Day" label appears above the number in ring center
+- [ ] "of N" appears below number when typical length is available
+
+### I3. Dashboard — Button Hierarchy
+
+- [ ] Log Period Start button is secondary variant when cycle data exists
+- [ ] Log Period Start button is primary variant when no cycles yet (empty state)
+- [ ] "View Cycle Log" ghost button is gone (tab navigation suffices)
+
+### I4. Dashboard — Padding
+
+- [ ] Info card, empty state, and log button align flush with screen padding
+- [ ] No double-padded elements (no extra margin beyond ScreenContainer)
+
+### I5. Profile Cards — Active Tint
+
+- [ ] Active profile card has subtle background tint (8% accent opacity)
+- [ ] Active profile card shows colored dot next to name
+- [ ] Active profile card does NOT have accent border (two signals, not three)
+- [ ] Non-active cards have 2px accent border on left, no tint, no dot
+
+### I6. Profile Cards — Ripple
+
+- [ ] (Android) Tapping a profile card shows ripple feedback
+- [ ] (Android) Tapping any AppButton shows ripple feedback
+
+### I7. CycleLog — Entry Polish
+
+- [ ] 1px divider visible between header (title+subtitle) and entry list
+- [ ] Entry date uses subheading typography (larger/bolder than body)
+- [ ] Edit mode: card has warm gray background tint — not info blue
+- [ ] Undo bar: neutral gray background with rotate-ccw icon — not blue/striped
+
+### I8. EmptyState — Icon Support
+
+- [ ] EmptyState component renders Feather icon above message when `icon` prop is provided
+- [ ] Without `icon` prop, EmptyState renders as before (message only)

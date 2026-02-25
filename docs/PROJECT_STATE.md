@@ -3,7 +3,7 @@
 > Authoritative session-to-session snapshot. Read this before making changes.
 > Update after every milestone or significant change.
 
-**Last updated**: 2026-02-25 (v0.4.3 released, Milestone 3 complete)
+**Last updated**: 2026-02-25 (v0.4.4 released, Milestone 4 complete)
 
 ---
 
@@ -11,14 +11,14 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.4.3 (stable, released) |
+| Version | 0.4.4 (stable, released) |
 | Branch | `main` |
 | Tests | 198 passed, 3 todo (Realm-specific manual), 0 failures |
 | Types | `tsc --noEmit` clean |
-| Tags | `v0.4.0-rc1`, `v0.4.1`, `v0.4.2`, `v0.4.3` |
+| Tags | `v0.4.0-rc1`, `v0.4.1`, `v0.4.2`, `v0.4.3`, `v0.4.4` |
 | EAS builds | `76a2ef96` (v0.4.0-rc1, preview) |
-| Milestone 3 | COMPLETE — UX Implementation (v0.4.3) |
-| Next action | Milestone 4 — UX Refinement (beauty + clarity + reduced friction) |
+| Milestone 4 | COMPLETE — UX Refinement (v0.4.4) |
+| Next action | TBD — next milestone planning |
 
 ## Architecture
 
@@ -115,6 +115,17 @@ UI wiring (CycleLogScreen):
 | Native date picker | `@react-native-community/datetimepicker`; local-timezone `localDateToIso`/`isoToLocalDate` |
 | Cycle captions | `Cycle #N · X days` below each entry date; `computeEntryMeta()` pure function |
 
+### UX Refinement (Milestone 4 — v0.4.4)
+
+| Feature | Implementation |
+|---|---|
+| Date header | `toLocaleDateString` with try/catch fallback replaces "Hi, {name}" greeting |
+| Responsive ring | 200dp default, capped at `screenWidth - 2*spacing.xl` via `useWindowDimensions` |
+| Active card tint | 8% accent opacity background + dot (two signals); non-active: accent border only |
+| Neutral edit mode | `surfaceMuted: #F5F5F3` warm gray tint on edit-mode cards; undo bar uses neutral palette |
+| Android ripple | `android_ripple` on all AppButton variants and profile card Pressable |
+| Padding audit | Removed redundant `marginHorizontal` on Dashboard elements; ScreenContainer provides consistent screenH |
+
 ### Encryption
 
 | Aspect | Value |
@@ -143,7 +154,8 @@ UI wiring (CycleLogScreen):
 | **Milestone 2** | **COMPLETE** | **Data Integrity & Cycle Editing — v0.4.2. All mutation invariants enforced across 3 repo implementations. Emulator regression PASS (2026-02-25).** |
 | v0.4.3 ux-impl | Done | Feather icons, profile accents, deferred undo, native date picker, cycle captions, 198 tests |
 | **Milestone 3** | **COMPLETE** | **UX Implementation — v0.4.3. Design system applied across all screens. WCAG-compliant palette. Deferred undo + native date picker in CycleLog.** |
-| **Milestone 4** | **NEXT** | **UX Refinement — beauty + clarity + reduced friction. No algorithmic insights.** |
+| v0.4.4 ux-refinement | Done | Date header, responsive ring, active card tint, neutral edit mode, android ripple, padding audit, 198 tests |
+| **Milestone 4** | **COMPLETE** | **UX Refinement — v0.4.4. Dashboard calm & premium, profile card visual refinement, CycleLog entry polish, global consistency.** |
 
 ## ADRs
 

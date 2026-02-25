@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.4.4 — UX Refinement (2026-02-25)
+- Replaced conversational "Hi, {name}" dashboard greeting with formatted date header (timezone-safe with Intl fallback).
+- Dashboard ring size increased to 200dp default, capped at screen width for small devices via `useWindowDimensions`.
+- Added "Day" label in ring center for clarity.
+- Log Period button uses secondary variant when cycle data exists (primary reserved for empty-state CTA).
+- Removed "View Cycle Log" ghost button from Dashboard (redundant with tab navigation).
+- Info card row padding increased for better visual breathing room.
+- Removed redundant horizontal margins on Dashboard elements (ScreenContainer provides consistent `screenH` padding).
+- Profile cards: active card uses 8% accent tint + dot (two signals); non-active cards use accent border only (avoids triple emphasis).
+- Added `android_ripple` to profile card Pressable and all AppButton variants.
+- CycleLog: 1px divider between header and entry list.
+- CycleLog: entry date promoted from body to subheading typography.
+- CycleLog: edit-mode card uses neutral warm gray (`surfaceMuted: #F5F5F3`) instead of info blue.
+- CycleLog: undo bar uses neutral palette with Feather `rotate-ccw` icon instead of accent stripe.
+- EmptyState component gains optional Feather `icon` prop.
+- Added `surfaceMuted` design token to color palette.
+
 ## v0.4.3 — UX Implementation (2026-02-25)
 - Replaced emoji tab labels with Feather stroke icons (`@expo/vector-icons`): home, users, settings.
 - Added per-profile accent surfaces: 2px left border on profile cards using avatar palette color, 8px active dot for selected profile.
