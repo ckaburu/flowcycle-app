@@ -9,10 +9,10 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.4.3 |
+| Version | 0.4.4 |
 | Branch | `main` (clean working tree) |
-| Latest commit | `c91b7c3` — `feat(ux): implement UX system — icons, accents, undo, date picker, captions` |
-| Latest tag | `v0.4.3` (annotated, pushed to origin) |
+| Latest commit | `462173b` — `chore(release): v0.4.4 — UX Refinement milestone complete` |
+| Latest tag | `v0.4.4` (annotated, pushed to origin) |
 | Remote | `origin` → GitHub (`ckaburu/flowcycle-app`) |
 | Tests | 198 passed, 3 todo (Realm JSI manual), 15 suites |
 | Types | `tsc --noEmit` clean |
@@ -87,7 +87,7 @@ flowcycle-app/
 | 1 | Notification Reliability | v0.4.0 + v0.4.1 | COMPLETE |
 | 2 | Data Integrity & Cycle Editing | v0.4.2 | COMPLETE |
 | 3 | UX Implementation | v0.4.3 | COMPLETE |
-| **4** | **UX Refinement** | **v0.4.4** | **NEXT** |
+| 4 | UX Refinement | v0.4.4 | COMPLETE |
 
 Prior milestones (all COMPLETE): v0.1 spike-core, v0.2 encrypted storage, v0.3-1 design system, v0.3-2 app lock, v0.3-3 onboarding, v0.3-4 dashboard, v0.3-5 navigation.
 
@@ -164,8 +164,8 @@ computeEntryMeta(entries: {id, startDateIso}[]): Map<id, {cycleNumber, intervalD
 
 | Screen | How profile context is shown |
 |---|---|
-| Dashboard | ProfileAvatar (40px) + greeting in header row |
-| Profiles | Active dot (8px) + accent border on selected card |
+| Dashboard | ProfileAvatar (40px) + formatted date in header row |
+| Profiles | Active: 8% accent tint + dot (two signals); non-active: accent border only |
 | CycleLog | ProfileAvatar (24px) + name in subtitle row |
 | Settings | Profile name in toggle label: "Period Reminders ({name})" |
 
@@ -212,72 +212,24 @@ No screen-level integration tests (no JSDOM/react-native-testing-library). All t
 
 ---
 
-## 8. Milestone 4 — UX Refinement (v0.4.4)
+## 8. Milestone 4 — UX Refinement (v0.4.4) — Delivered
 
-**Theme**: Beauty + clarity + reduced friction. No new features. No algorithmic insights.
+**Theme**: Beauty + clarity + reduced friction. No new features. No algorithmic insights. Zero repo/domain changes.
 
-### Scope Boundaries
+### What Changed
 
-- NO Repository interface changes
-- NO new domain logic or data models
-- NO heuristic or "smart" features
-- NO conversational UI tone
-- Neutral, instrument-like language throughout
-- Each step passes `tsc` + `npm test` before next
+| Commit | Scope | Changes |
+|---|---|---|
+| `921f7d8` | ProfilesScreen | ProfileAvatar (32px) per card, cycle counts via `listCycleStarts`, repositioned CTA, "Select a profile" label |
+| `e0c9cab` | DashboardScreen, CycleDayRing | `toLocaleDateString` date header (replaces "Hi, {name}"), ring 200dp default capped at screen width, "Day" label in ring center, secondary log button, removed ghost button |
+| `36cb69c` | ProfilesScreen | Active card: 8% accent tint + dot (two signals); non-active: accent border only; `android_ripple` on Pressable |
+| `4a622f7` | CycleLogScreen, tokens.ts | 1px divider, entry date promoted to subheading, `surfaceMuted: #F5F5F3` edit tint, neutral undo bar with `rotate-ccw` icon |
+| `706b860` | AppButton, EmptyState, DashboardScreen | `android_ripple` on all button variants, optional Feather `icon` prop on EmptyState, removed redundant `marginHorizontal` |
+| `462173b` | Docs/config | Version bump 0.4.4, CHANGELOG, PROJECT_STATE, verification checklist, CONTEXT_SNAPSHOT |
 
-### Execution Plan (6 steps)
+### New Design Token
 
-**Step 1 — Profiles Screen: Multi-Profile Mental Model**
-Files: `ProfilesScreen.tsx`
-- Add ProfileAvatar (32px) to each card
-- Replace `ID: {id}` with cycle count (`"{N} cycles"` / `"No cycles yet"`) via `Promise.all(profiles.map(p => repo.listCycleStarts(p.id)))` — no repo interface change
-- Move Add Profile CTA above card list
-- Neutral subheading: `"Select a profile"`
-
-**Step 2 — Dashboard: Calm & Premium**
-Files: `DashboardScreen.tsx`, `CycleDayRing.tsx`
-- Replace greeting with formatted date (`toLocaleDateString` with try/catch fallback)
-- Ring: 180→200dp default, capped at `screenWidth - 2*spacing.xl` via `useWindowDimensions`
-- Add "Day" label in ring center
-- Info card: increased row padding
-- Log button: `secondary` variant (primary only for empty-state CTA)
-- Remove "View Cycle Log" ghost button
-
-**Step 3 — Profile Card Visual Refinement**
-Files: `ProfilesScreen.tsx`
-- Active card: dot + 8% opacity tint (two signals only, no triple emphasis)
-- Non-active: border only
-- Add `android_ripple` to Pressable
-- Pre-validated tints for all 6 palette hues
-
-**Step 4 — CycleLog: Entry Polish**
-Files: `CycleLogScreen.tsx`, `tokens.ts`
-- 1px divider between header and list
-- Date text: `body` → `subheading`
-- Edit mode: neutral `surfaceMuted` tint (new token, warm gray `#F5F5F3`) — not info blue
-- Undo bar: Feather `rotate-ccw` icon (16dp, `textMuted`) — no stripe
-
-**Step 5 — Global Polish**
-Files: `AppButton.tsx`, `EmptyState.tsx`, `ScreenContainer.tsx`
-- `android_ripple` on all button variants
-- EmptyState: optional Feather icon prop
-- Consistent `paddingHorizontal: spacing.screenH` audit
-
-**Step 6 — Release**
-- Run tests + tsc
-- Update CHANGELOG, PROJECT_STATE, verification.md
-- Bump to 0.4.4, commit, tag, push
-
-### Commit Plan
-
-| Step | Message |
-|---|---|
-| 1 | `feat(profiles): avatar cards, cycle counts, repositioned CTA` |
-| 2 | `refine(dashboard): date context, responsive ring, softer actions` |
-| 3 | `refine(profiles): active card tint, ripple feedback` |
-| 4 | `refine(cycle-log): entry emphasis, neutral edit tint, undo icon` |
-| 5 | `refine(ui): ripple feedback, empty state icons, padding audit` |
-| 6 | `chore(release): v0.4.4 tests, verification, tag` |
+`colors.surfaceMuted: "#F5F5F3"` — warm gray for neutral edit/selected tint (used in CycleLog edit mode and undo bar).
 
 ---
 
