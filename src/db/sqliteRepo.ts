@@ -120,6 +120,15 @@ class SQLiteRepo implements Repository {
     }));
   }
 
+  async renameProfile(id: number, newName: string): Promise<void> {
+    await this.init();
+    const db = await this.getDb();
+    const result = await db.runAsync("UPDATE profiles SET name = ? WHERE id = ?;", newName, id);
+    if (result.changes === 0) {
+      throw new Error(`Profile not found: ${id}`);
+    }
+  }
+
   async deleteProfile(id: number): Promise<void> {
     await this.init();
     const db = await this.getDb();
@@ -287,6 +296,40 @@ class SQLiteRepo implements Repository {
       enabled: row.enabled === 1,
       daysBefore: row.days_before,
     }));
+  }
+
+  async importRawData(
+    profiles: Array<{ id: number; name: string; createdAt: string }>,
+    cycleStarts: Array<{ profileId: number; startDateIso: string; createdAt: string }>,
+    notificationPreferences: Array<{ profileId: number; enabled: boolean; daysBefore: number }>,
+  ): Promise<void> {
+    await this.init();
+    const db = await this.getDb();
+
+    await db.runAsync("DELETE FROM notification_preferences;");
+    await db.runAsync("DELETE FROM cycle_starts;");
+    await db.runAsync("DELETE FROM profiles;");
+
+    for (const p of profiles) {
+      await db.runAsync(
+        "INSERT INTO profiles (id, name, created_at) VALUES (?, ?, ?);",
+        p.id, p.name, p.createdAt,
+      );
+    }
+
+    for (const cs of cycleStarts) {
+      await db.runAsync(
+        "INSERT INTO cycle_starts (profile_id, start_date, created_at) VALUES (?, ?, ?);",
+        cs.profileId, cs.startDateIso, cs.createdAt,
+      );
+    }
+
+    for (const np of notificationPreferences) {
+      await db.runAsync(
+        "INSERT INTO notification_preferences (profile_id, enabled, days_before) VALUES (?, ?, ?);",
+        np.profileId, np.enabled ? 1 : 0, np.daysBefore,
+      );
+    }
   }
 
   async clearAllForTesting(): Promise<void> {

@@ -1,3 +1,10 @@
+export class ImportValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ImportValidationError";
+  }
+}
+
 export class DuplicateCycleStartError extends Error {
   constructor(startDateIso: string) {
     super(`A cycle start already exists for ${startDateIso}.`);

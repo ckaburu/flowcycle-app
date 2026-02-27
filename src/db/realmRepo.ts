@@ -208,6 +208,19 @@ class RealmRepo implements Repository {
     return Array.from(profiles);
   }
 
+  async renameProfile(id: number, newName: string): Promise<void> {
+    await this.init();
+    const realm = this.getRealmOrThrow();
+
+    realm.write(() => {
+      const profile = realm.objectForPrimaryKey<ProfileRecord>(PROFILE_SCHEMA_NAME, id);
+      if (!profile) {
+        throw new Error(`Profile not found: ${id}`);
+      }
+      profile.name = newName;
+    });
+  }
+
   async deleteProfile(id: number): Promise<void> {
     await this.init();
     const realm = this.getRealmOrThrow();
@@ -385,6 +398,47 @@ class RealmRepo implements Repository {
       }));
 
     return Array.from(entries);
+  }
+
+  async importRawData(
+    profiles: Array<{ id: number; name: string; createdAt: string }>,
+    cycleStarts: Array<{ profileId: number; startDateIso: string; createdAt: string }>,
+    notificationPreferences: Array<{ profileId: number; enabled: boolean; daysBefore: number }>,
+  ): Promise<void> {
+    await this.init();
+    const realm = this.getRealmOrThrow();
+
+    realm.write(() => {
+      // Clear all existing data
+      realm.delete(realm.objects(NOTIFICATION_PREFERENCE_SCHEMA_NAME));
+      realm.delete(realm.objects(CYCLE_START_SCHEMA_NAME));
+      realm.delete(realm.objects(PROFILE_SCHEMA_NAME));
+
+      // Write profiles with exact IDs
+      for (const p of profiles) {
+        realm.create(PROFILE_SCHEMA_NAME, { id: p.id, name: p.name, createdAt: p.createdAt });
+      }
+
+      // Write cycle starts with auto-generated IDs
+      let nextCsId = 1;
+      for (const cs of cycleStarts) {
+        realm.create(CYCLE_START_SCHEMA_NAME, {
+          id: nextCsId++,
+          profileId: cs.profileId,
+          startDateIso: cs.startDateIso,
+          createdAt: cs.createdAt,
+        });
+      }
+
+      // Write notification preferences
+      for (const np of notificationPreferences) {
+        realm.create(NOTIFICATION_PREFERENCE_SCHEMA_NAME, {
+          profileId: np.profileId,
+          enabled: np.enabled,
+          daysBefore: np.daysBefore,
+        });
+      }
+    });
   }
 
   async clearAllForTesting(): Promise<void> {

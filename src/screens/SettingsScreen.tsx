@@ -1,12 +1,17 @@
 import type { ReactElement } from "react";
 import { useCallback, useState } from "react";
-import { InteractionManager, StyleSheet, Switch, View } from "react-native";
+import { Alert, InteractionManager, StyleSheet, Switch, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import Constants from "expo-constants";
+import { File as ExpoFile, Paths } from "expo-file-system";
+import { shareAsync } from "expo-sharing";
 
 import { isPinSet } from "../domain/LockState";
 import { loadActiveProfileId } from "../domain/AppState";
+import { exportData } from "../domain/exportData";
+import { importData } from "../domain/importData";
+import { ImportValidationError } from "../domain/errors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { syncNotifications } from "../domain/syncNotifications";
 import { devSyncLogger } from "../domain/devSyncLogger";
@@ -14,6 +19,7 @@ import { buildTestReminder } from "../domain/notificationPlan";
 import { getRepository } from "../db";
 import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
 import { requestNotificationPermissions } from "../utils/notifications";
+import { localDateToIso } from "../utils/date";
 import type { SettingsStackParamList } from "../navigation/types";
 import {
   ListItem,
@@ -37,6 +43,7 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
   const [daysBefore, setDaysBefore] = useState(2);
   const [notifLoading, setNotifLoading] = useState(true);
   const [notifError, setNotifError] = useState("");
+  const [dataError, setDataError] = useState("");
 
   const loadNotifState = useCallback(async (): Promise<void> => {
     const profileId = await loadActiveProfileId();
@@ -145,6 +152,75 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
     await AsyncStorage.removeItem("flowcycle.trackedNotificationIds");
   }, []);
 
+  const handleExport = useCallback(async (): Promise<void> => {
+    setDataError("");
+    try {
+      const repo = getRepository();
+      const bundle = await exportData(repo, appVersion);
+      const json = JSON.stringify(bundle, null, 2);
+      const dateStr = localDateToIso(new Date());
+      const fileName = `flowcycle-export-${dateStr}.json`;
+      const file = new ExpoFile(Paths.cache, fileName);
+      file.write(json);
+      await shareAsync(file.uri, {
+        mimeType: "application/json",
+        UTI: "public.json",
+      });
+    } catch {
+      setDataError("Export failed. Please try again.");
+    }
+  }, []);
+
+  const handleImport = useCallback(async (): Promise<void> => {
+    setDataError("");
+    try {
+      const picked = await ExpoFile.pickFileAsync(undefined, "application/json");
+      if (!picked) return;
+      const file = Array.isArray(picked) ? picked[0] : picked;
+      const text = await file.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        setDataError("File is not valid JSON.");
+        return;
+      }
+
+      // Confirm before destructive overwrite
+      await new Promise<void>((resolve, reject) => {
+        Alert.alert(
+          "Import Data",
+          "This will replace all existing data. This cannot be undone.",
+          [
+            { text: "Cancel", style: "cancel", onPress: () => reject(new Error("cancelled")) },
+            { text: "Import", style: "destructive", onPress: () => resolve() },
+          ],
+          { cancelable: false },
+        );
+      });
+
+      const repo = getRepository();
+      const adapter = new ExpoNotificationAdapter();
+      await importData(
+        repo,
+        adapter,
+        parsed,
+        __DEV__ ? devSyncLogger : undefined,
+      );
+
+      // Reload settings state to reflect imported data
+      void loadNotifState();
+    } catch (err) {
+      if (err instanceof ImportValidationError) {
+        setDataError(err.message);
+      } else if (err instanceof Error && err.message === "cancelled") {
+        // User cancelled — no error
+      } else {
+        setDataError("Import failed. Please try again.");
+      }
+    }
+  }, [loadNotifState]);
+
   return (
     <ScreenContainer>
       <AppText variant="heading" style={{ marginBottom: spacing.sm }}>
@@ -231,6 +307,26 @@ export function SettingsScreen({ navigation }: Props): ReactElement {
           )}
         </>
       )}
+
+      <SectionHeader title="Data" />
+
+      {dataError !== "" && (
+        <ErrorBanner
+          message={dataError}
+          onDismiss={() => setDataError("")}
+        />
+      )}
+
+      <ListItem
+        label="Export Data"
+        onPress={() => void handleExport()}
+        testID="settings-export-data"
+      />
+      <ListItem
+        label="Import Data"
+        onPress={() => void handleImport()}
+        testID="settings-import-data"
+      />
 
       <SectionHeader title="About" />
 

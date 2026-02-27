@@ -49,6 +49,31 @@ describe("memoryRepo", () => {
     expect(cycleStarts).toHaveLength(0);
   });
 
+  // ── Rename profile tests (v0.5) ──────────────────────────────────
+
+  it("renameProfile changes name", async () => {
+    const profile = await memoryRepo.createProfile("OldName");
+    await memoryRepo.renameProfile(profile.id, "NewName");
+
+    const profiles = await memoryRepo.listProfiles();
+    expect(profiles[0].name).toBe("NewName");
+  });
+
+  it("renameProfile throws for non-existent profile", async () => {
+    await expect(memoryRepo.renameProfile(9999, "Ghost")).rejects.toThrow(
+      "Profile not found",
+    );
+  });
+
+  it("renameProfile preserves id and createdAt", async () => {
+    const profile = await memoryRepo.createProfile("Original");
+    await memoryRepo.renameProfile(profile.id, "Renamed");
+
+    const profiles = await memoryRepo.listProfiles();
+    expect(profiles[0].id).toBe(profile.id);
+    expect(profiles[0].createdAt).toBe(profile.createdAt);
+  });
+
   // ── Notification Preference tests (v0.4) ──────────────────────────
 
   it("create preference then read back", async () => {

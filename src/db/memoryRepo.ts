@@ -32,6 +32,14 @@ class MemoryRepo implements Repository {
     return this.profiles.map((profile) => ({ ...profile }));
   }
 
+  async renameProfile(id: number, newName: string): Promise<void> {
+    const profile = this.profiles.find((p) => p.id === id);
+    if (!profile) {
+      throw new Error(`Profile not found: ${id}`);
+    }
+    profile.name = newName;
+  }
+
   async deleteProfile(id: number): Promise<void> {
     this.profiles = this.profiles.filter((profile) => profile.id !== id);
     this.cycleStarts = this.cycleStarts.filter((entry) => entry.profileId !== id);
@@ -125,6 +133,27 @@ class MemoryRepo implements Repository {
 
   async listNotificationPreferences(): Promise<NotificationPreference[]> {
     return this.notificationPreferences.map((p) => ({ ...p }));
+  }
+
+  async importRawData(
+    profiles: Array<{ id: number; name: string; createdAt: string }>,
+    cycleStarts: Array<{ profileId: number; startDateIso: string; createdAt: string }>,
+    notificationPreferences: Array<{ profileId: number; enabled: boolean; daysBefore: number }>,
+  ): Promise<void> {
+    this.profiles = profiles.map((p) => ({ ...p }));
+    this.nextProfileId =
+      profiles.length > 0 ? Math.max(...profiles.map((p) => p.id)) + 1 : 1;
+
+    let nextCsId = 1;
+    this.cycleStarts = cycleStarts.map((cs) => ({
+      id: nextCsId++,
+      profileId: cs.profileId,
+      startDateIso: cs.startDateIso,
+      createdAt: cs.createdAt,
+    }));
+    this.nextCycleStartId = nextCsId;
+
+    this.notificationPreferences = notificationPreferences.map((np) => ({ ...np }));
   }
 
   async clearAllForTesting(): Promise<void> {

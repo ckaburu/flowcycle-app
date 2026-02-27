@@ -2,11 +2,13 @@ import type { ReactElement } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useState } from "react";
-import { InteractionManager, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Alert, InteractionManager, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 import { getRepository } from "../db";
 import { Profile } from "../db/repo";
 import { loadActiveProfileId, saveActiveProfileId } from "../domain/AppState";
+import { deleteProfileAndReassignActive } from "../domain/profileLifecycle";
 import { syncNotifications } from "../domain/syncNotifications";
 import { devSyncLogger } from "../domain/devSyncLogger";
 import { ExpoNotificationAdapter } from "../utils/expoNotificationAdapter";
@@ -37,6 +39,10 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
   const [activeProfileId, setActiveProfileId] = useState<number | null>(null);
   const [newProfileName, setNewProfileName] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Rename state
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const loadProfiles = useCallback(async (): Promise<void> => {
     setIsLoading(true);
@@ -91,13 +97,13 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
   };
 
   const onSelectProfile = async (profileId: number): Promise<void> => {
+    if (renamingId !== null) return; // Don't navigate while renaming
     try {
       setError(null);
       await saveActiveProfileId(profileId);
       setActiveProfileId(profileId);
       navigation.navigate("CycleLog", { profileId });
 
-      // Fire-and-forget: re-sync notifications after profile switch
       syncNotifications(
         repository,
         new ExpoNotificationAdapter(),
@@ -105,6 +111,71 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
       ).catch((err) => console.error("[NotifSync] sync failed:", err));
     } catch {
       setError("Failed to set active profile.");
+    }
+  };
+
+  const onStartRename = (profile: Profile): void => {
+    setRenamingId(profile.id);
+    setRenameValue(profile.name);
+    setError(null);
+  };
+
+  const onCancelRename = (): void => {
+    setRenamingId(null);
+    setRenameValue("");
+  };
+
+  const onConfirmRename = async (): Promise<void> => {
+    if (renamingId === null) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed) {
+      setError("Profile name is required.");
+      return;
+    }
+    try {
+      setError(null);
+      await repository.renameProfile(renamingId, trimmed);
+      setRenamingId(null);
+      setRenameValue("");
+      await loadProfiles();
+    } catch {
+      setError("Failed to rename profile.");
+    }
+  };
+
+  const onDeleteProfile = (profile: Profile): void => {
+    Alert.alert(
+      "Delete Profile",
+      `Delete "${profile.name}" and all its data? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => void confirmDelete(profile.id),
+        },
+      ],
+    );
+  };
+
+  const confirmDelete = async (profileId: number): Promise<void> => {
+    try {
+      setError(null);
+      const adapter = new ExpoNotificationAdapter();
+      await deleteProfileAndReassignActive(
+        repository,
+        adapter,
+        profileId,
+        __DEV__ ? devSyncLogger : undefined,
+      );
+      // If we were renaming this profile, cancel
+      if (renamingId === profileId) {
+        setRenamingId(null);
+        setRenameValue("");
+      }
+      await loadProfiles();
+    } catch {
+      setError("Failed to delete profile.");
     }
   };
 
@@ -153,6 +224,8 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
         const accent = AVATAR_PALETTE[avatarColorIndex(profile.name)];
         const count = cycleCounts.get(profile.id) ?? 0;
         const isActive = activeProfileId === profile.id;
+        const isRenaming = renamingId === profile.id;
+
         return (
           <Pressable
             key={profile.id}
@@ -161,7 +234,9 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
             }}
             accessibilityRole="button"
             android_ripple={
-              Platform.OS === "android" ? { color: `${accent}20` } : undefined
+              Platform.OS === "android" && !isRenaming
+                ? { color: `${accent}20` }
+                : undefined
             }
           >
             <AppCard
@@ -174,18 +249,64 @@ export function ProfilesScreen({ navigation }: Props): ReactElement {
             >
               <ProfileAvatar name={profile.name} size={32} />
               <View style={styles.profileInfo}>
-                <View style={styles.profileNameRow}>
-                  <AppText variant="subheading">{profile.name}</AppText>
-                  {isActive && (
-                    <View
-                      style={[styles.activeDot, { backgroundColor: accent }]}
+                {isRenaming ? (
+                  <View style={styles.renameRow}>
+                    <AppInput
+                      value={renameValue}
+                      onChangeText={setRenameValue}
+                      autoCapitalize="words"
+                      autoFocus
+                      style={styles.renameInput}
                     />
-                  )}
-                </View>
-                <AppText variant="caption" color={colors.textMuted}>
-                  {count > 0 ? `${count} cycle${count === 1 ? "" : "s"}` : "No cycles yet"}
-                </AppText>
+                    <Pressable
+                      onPress={() => void onConfirmRename()}
+                      hitSlop={8}
+                      testID={`profile-rename-save-${profile.id}`}
+                    >
+                      <Feather name="check" size={20} color={colors.primary} />
+                    </Pressable>
+                    <Pressable
+                      onPress={onCancelRename}
+                      hitSlop={8}
+                      testID={`profile-rename-cancel-${profile.id}`}
+                    >
+                      <Feather name="x" size={20} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.profileNameRow}>
+                      <AppText variant="subheading">{profile.name}</AppText>
+                      {isActive && (
+                        <View
+                          style={[styles.activeDot, { backgroundColor: accent }]}
+                        />
+                      )}
+                    </View>
+                    <AppText variant="caption" color={colors.textMuted}>
+                      {count > 0 ? `${count} cycle${count === 1 ? "" : "s"}` : "No cycles yet"}
+                    </AppText>
+                  </>
+                )}
               </View>
+              {!isRenaming && (
+                <View style={styles.actionRow}>
+                  <Pressable
+                    onPress={() => onStartRename(profile)}
+                    hitSlop={8}
+                    testID={`profile-rename-${profile.id}`}
+                  >
+                    <Feather name="edit-2" size={16} color={colors.textMuted} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onDeleteProfile(profile)}
+                    hitSlop={8}
+                    testID={`profile-delete-${profile.id}`}
+                  >
+                    <Feather name="trash-2" size={16} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+              )}
             </AppCard>
           </Pressable>
         );
@@ -226,5 +347,18 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  renameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  renameInput: {
+    flex: 1,
   },
 });
