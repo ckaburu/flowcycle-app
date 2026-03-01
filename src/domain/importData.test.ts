@@ -5,6 +5,7 @@ import { ImportValidationError } from "./errors";
 import { importData } from "./importData";
 import { exportData } from "./exportData";
 import { loadActiveProfileId, saveActiveProfileId } from "./AppState";
+import * as syncModule from "./syncNotifications";
 
 // ────────────────────────────────────────────
 // AsyncStorage mock (in-memory)
@@ -365,7 +366,6 @@ describe("importData", () => {
 
   describe("atomicity", () => {
     it("failed validation leaves repo unchanged", async () => {
-      // Seed existing data
       const existing = await repo.createProfile("Existing");
       await repo.addCycleStart(existing.id, "2026-02-01");
 
@@ -376,13 +376,129 @@ describe("importData", () => {
         ImportValidationError,
       );
 
-      // Repo should be unchanged
       const profiles = await repo.listProfiles();
       expect(profiles).toHaveLength(1);
       expect(profiles[0].name).toBe("Existing");
 
       const cycles = await repo.listCycleStarts(existing.id);
       expect(cycles).toHaveLength(1);
+    });
+
+    it("failed validation does not change active profile", async () => {
+      const p1 = await repo.createProfile("Keeper");
+      await repo.createProfile("Other");
+      await saveActiveProfileId(p1.id);
+
+      const adapter = createMockAdapter();
+      const badBundle = validBundle({ exportedAtIso: "not-a-date" });
+
+      await expect(importData(repo, adapter, badBundle)).rejects.toThrow(
+        ImportValidationError,
+      );
+
+      const activeId = await loadActiveProfileId();
+      expect(activeId).toBe(p1.id);
+    });
+  });
+
+  describe("atomicity torture — adversarial bundles", () => {
+    // Rich seed: 3 profiles, multiple cycles, mixed notif prefs, explicit active
+    async function seedRichState(): Promise<void> {
+      const p1 = await repo.createProfile("Alpha");
+      const p2 = await repo.createProfile("Beta");
+      const p3 = await repo.createProfile("Gamma");
+      await repo.addCycleStart(p1.id, "2026-01-01");
+      await repo.addCycleStart(p1.id, "2026-01-28");
+      await repo.addCycleStart(p2.id, "2026-02-01");
+      await repo.addCycleStart(p3.id, "2025-12-15");
+      await repo.addCycleStart(p3.id, "2026-01-12");
+      await repo.setNotificationPreference(p1.id, true, 2);
+      await repo.setNotificationPreference(p3.id, false, 1);
+      await saveActiveProfileId(p2.id);
+    }
+
+    async function snapshotAndAssertUnchanged(badBundle: Record<string, unknown>): Promise<void> {
+      const beforeSnapshot = await exportData(repo, "atomicity");
+      const beforeActiveId = await loadActiveProfileId();
+
+      const adapter = createMockAdapter();
+      await expect(importData(repo, adapter, badBundle)).rejects.toThrow(
+        ImportValidationError,
+      );
+
+      const afterSnapshot = await exportData(repo, "atomicity");
+      const afterActiveId = await loadActiveProfileId();
+
+      expect(afterSnapshot.profiles).toEqual(beforeSnapshot.profiles);
+      expect(afterActiveId).toBe(beforeActiveId);
+    }
+
+    it("wrong schemaVersion: repo + active unchanged", async () => {
+      await seedRichState();
+      await snapshotAndAssertUnchanged(validBundle({ schemaVersion: 999 }));
+    });
+
+    it("invalid exportedAtIso: repo + active unchanged", async () => {
+      await seedRichState();
+      await snapshotAndAssertUnchanged(validBundle({ exportedAtIso: "not-a-date" }));
+    });
+
+    it("duplicate profile ids: repo + active unchanged", async () => {
+      await seedRichState();
+      await snapshotAndAssertUnchanged(validBundle({
+        profiles: [
+          { id: 1, name: "A", createdAt: "2026-01-01T00:00:00.000Z", cycleStarts: [], notificationPreference: null },
+          { id: 1, name: "B", createdAt: "2026-01-02T00:00:00.000Z", cycleStarts: [], notificationPreference: null },
+        ],
+      }));
+    });
+
+    it("unsorted cycleStarts: repo + active unchanged", async () => {
+      await seedRichState();
+      await snapshotAndAssertUnchanged(validBundle({
+        profiles: [{
+          id: 1, name: "Test", createdAt: "2026-01-01T00:00:00.000Z",
+          cycleStarts: [
+            { startDateIso: "2026-02-01", createdAt: "2026-02-01T10:00:00.000Z" },
+            { startDateIso: "2026-01-01", createdAt: "2026-01-01T10:00:00.000Z" },
+          ],
+          notificationPreference: null,
+        }],
+      }));
+    });
+
+    it("invalid cycleStart ISO date: repo + active unchanged", async () => {
+      await seedRichState();
+      await snapshotAndAssertUnchanged(validBundle({
+        profiles: [{
+          id: 1, name: "Test", createdAt: "2026-01-01T00:00:00.000Z",
+          cycleStarts: [
+            { startDateIso: "2026-13-45", createdAt: "2026-01-01T10:00:00.000Z" },
+          ],
+          notificationPreference: null,
+        }],
+      }));
+    });
+  });
+
+  describe("adapter resilience", () => {
+    it("succeeds even if notification adapter throws during sync", async () => {
+      const spy = jest.spyOn(syncModule, "syncNotifications")
+        .mockRejectedValueOnce(new Error("adapter exploded"));
+
+      const adapter = createMockAdapter();
+      await importData(repo, adapter, validBundle());
+
+      // Data was imported despite sync failure
+      const profiles = await repo.listProfiles();
+      expect(profiles).toHaveLength(2);
+      expect(profiles.map((p) => p.name).sort()).toEqual(["Alice", "Bob"]);
+
+      // Active profile was set
+      const activeId = await loadActiveProfileId();
+      expect(activeId).toBe(1);
+
+      spy.mockRestore();
     });
   });
 });

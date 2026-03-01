@@ -3,6 +3,7 @@ import type { Repository } from "../db/repo";
 import type { NotificationAdapter } from "../utils/notificationAdapter";
 import { deleteProfileAndReassignActive } from "./profileLifecycle";
 import { loadActiveProfileId, saveActiveProfileId } from "./AppState";
+import * as syncModule from "./syncNotifications";
 
 // ────────────────────────────────────────────
 // AsyncStorage mock (in-memory)
@@ -156,5 +157,29 @@ describe("deleteProfileAndReassignActive", () => {
 
     const activeId = await loadActiveProfileId();
     expect(activeId).toBe(p1.id);
+  });
+
+  it("does not throw when notification sync fails, still deletes and reassigns", async () => {
+    const p1 = await repo.createProfile("Survivor");
+    const p2 = await repo.createProfile("ToDelete");
+    await saveActiveProfileId(p2.id);
+
+    const spy = jest.spyOn(syncModule, "syncNotifications")
+      .mockRejectedValueOnce(new Error("adapter crash"));
+
+    const adapter = createMockAdapter();
+    // Must not throw
+    await deleteProfileAndReassignActive(repo, adapter, p2.id);
+
+    // Profile was deleted
+    const profiles = await repo.listProfiles();
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0].name).toBe("Survivor");
+
+    // Active was reassigned despite sync failure
+    const activeId = await loadActiveProfileId();
+    expect(activeId).toBe(p1.id);
+
+    spy.mockRestore();
   });
 });

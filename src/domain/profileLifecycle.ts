@@ -38,5 +38,11 @@ export async function deleteProfileAndReassignActive(
     }
   }
 
-  await syncNotifications(repo, adapter, logger);
+  try {
+    await syncNotifications(repo, adapter, logger);
+  } catch (error: unknown) {
+    if (logger) {
+      logger.onError("deleteProfileAndReassignActive", "sync", error);
+    }
+  }
 }

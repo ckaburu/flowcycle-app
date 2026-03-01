@@ -214,6 +214,12 @@ export async function importData(
     await saveActiveProfileId(null);
   }
 
-  // Re-sync notifications
-  await syncNotifications(repo, adapter, logger);
+  // Re-sync notifications — must not fail the import
+  try {
+    await syncNotifications(repo, adapter, logger);
+  } catch (error: unknown) {
+    if (logger) {
+      logger.onError("importData", "sync", error);
+    }
+  }
 }
