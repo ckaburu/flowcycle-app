@@ -43,3 +43,6 @@ yarn-error.*
 # workspace / agent context (local only)
 /prompts.md
 /PROJECT_STATE.md
+
+# generated test artifacts
+/tmp
